@@ -44,6 +44,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mock-openwa:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -54,6 +56,17 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+
+  mock-openwa:
+    image: node:20-alpine
+    container_name: lead-mock-openwa
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./mock-openwa.js:/app/mock-openwa.js:ro
+    working_dir: /app
+    command: ["node", "mock-openwa.js"]
 
   worker:
     build:

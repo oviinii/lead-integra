@@ -15,9 +15,9 @@ if ! docker compose version >/dev/null 2>&1; then
   sudo apt-get install -y docker-compose-plugin
 fi
 
-echo "==> Clonando projeto (ajuste o repo)"
+echo "==> Clonando projeto"
 if [ ! -d lead-integra ]; then
-  git clone <URL_DO_REPOSITORIO> lead-integra
+  git clone https://github.com/oviinii/lead-integra.git lead-integra
 fi
 
 cd lead-integra
