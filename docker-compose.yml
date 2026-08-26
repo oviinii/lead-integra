@@ -1,5 +1,10 @@
 version: "3.9"
 
+x-backend-build: &backend-build
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -30,9 +35,7 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    <<: *backend-build
     container_name: lead-backend
     restart: unless-stopped
     depends_on:
@@ -49,9 +52,6 @@ services:
       REDIS_URL: redis://redis:6379
     ports:
       - "3001:3001"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
 
   mock-openwa:
     image: node:20-alpine
@@ -65,9 +65,7 @@ services:
     command: ["node", "mock-openwa.js"]
 
   worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    <<: *backend-build
     container_name: lead-worker
     restart: unless-stopped
     depends_on:
@@ -81,23 +79,18 @@ services:
       DATABASE_URL: postgresql://leaduser:leadpass@postgres:5432/leadgenerator
       REDIS_URL: redis://redis:6379
       WORKER_ONLY: "true"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
     command: ["node", "dist/worker.js"]
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
     container_name: lead-frontend
     restart: unless-stopped
     depends_on:
       - backend
-    env_file:
-      - .env
-    environment:
-      VITE_API_URL: http://localhost:3001
     ports:
       - "5173:80"
 
