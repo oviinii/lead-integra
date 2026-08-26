@@ -10,9 +10,7 @@ services:
       POSTGRES_PASSWORD: leadpass
       POSTGRES_DB: leadgenerator
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+      - lead_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U leaduser -d leadgenerator"]
       interval: 10s
@@ -24,9 +22,7 @@ services:
     container_name: lead-redis
     restart: unless-stopped
     volumes:
-      - redis_data:/data
-    ports:
-      - "6379:6379"
+      - lead_redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -106,5 +102,5 @@ services:
       - "5173:80"
 
 volumes:
-  postgres_data:
-  redis_data:
+  lead_postgres_data:
+  lead_redis_data:
