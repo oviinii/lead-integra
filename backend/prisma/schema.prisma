@@ -1,0 +1,527 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  LOST
+  ARCHIVED
+}
+
+enum SearchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum CreditTxType {
+  SEARCH
+  ENRICHMENT
+  EXPORT
+  BONUS
+  PURCHASE
+  REFUND
+}
+
+enum NotificationType {
+  SEARCH_COMPLETED
+  EXPORT_READY
+  LOW_CREDITS
+  ENRICHMENT_COMPLETED
+  WORKSPACE_INVITE
+  SYSTEM
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PlanSlug {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+model User {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  isActive        Boolean  @default(true)
+  isSuperAdmin    Boolean  @default(false)
+  avatarUrl       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ownedWorkspaces    Workspace[]       @relation("WorkspaceOwner")
+  workspaceMembers   WorkspaceMember[]
+  leadsAssigned      Lead[]            @relation("LeadAssignee")
+  leadsCreated       Lead[]            @relation("LeadCreator")
+  searches           Search[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+  passwordResets     PasswordReset[]
+  apiKeys            ApiKey[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  ownerId   String
+  logoUrl   String?
+  plan      PlanSlug @default(FREE)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner              User                @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members            WorkspaceMember[]
+  companies          Company[]
+  leads              Lead[]
+  lists              LeadList[]
+  tags               Tag[]
+  searches           Search[]
+  exports            Export[]
+  creditBalance      CreditBalance?
+  creditTransactions CreditTransaction[]
+  enrichmentJobs     EnrichmentJob[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([slug])
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  externalId   String?
+  source       String?
+  sourceUrl    String?
+  name         String
+  legalName    String?
+  document     String?
+  category     String?
+  description  String?
+  phone        String?
+  whatsapp     String?
+  email        String?
+  website      String?
+  instagram    String?
+  facebook     String?
+  linkedin     String?
+  youtube      String?
+  tiktok       String?
+  address      String?
+  neighborhood String?
+  city         String?
+  state        String?
+  country      String?
+  postalCode   String?
+  latitude     Float?
+  longitude    Float?
+  rating       Float?
+  reviewCount  Int?
+  isActive     Boolean  @default(true)
+  whatsappVerified Boolean @default(false)
+  businessHours Json?
+  raw          Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leads           Lead[]
+  dataSources     CompanyDataSource[]
+  searchResults   SearchResult[]
+
+  @@unique([workspaceId, externalId, source])
+  @@index([workspaceId])
+  @@index([workspaceId, city])
+  @@index([workspaceId, state])
+  @@index([workspaceId, category])
+  @@index([workspaceId, name])
+  @@index([document])
+}
+
+model CompanyDataSource {
+  id        String   @id @default(cuid())
+  companyId String
+  field     String
+  value     String
+  source    String
+  confidence Float  @default(1.0)
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([field])
+}
+
+model Lead {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  companyId    String
+  status       LeadStatus @default(NEW)
+  notes        String?
+  score        Int        @default(0)
+  scoreLabel   String?
+  assigneeId   String?
+  createdById  String?
+  lastContactAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  workspace Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignee  User?        @relation("LeadAssignee", fields: [assigneeId], references: [id])
+  creator   User?        @relation("LeadCreator", fields: [createdById], references: [id])
+  lists     LeadListItem[]
+  tags      LeadTag[]
+
+  @@unique([workspaceId, companyId])
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, score])
+  @@index([companyId])
+}
+
+model LeadList {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  color       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  items     LeadListItem[]
+
+  @@index([workspaceId])
+}
+
+model LeadListItem {
+  id        String   @id @default(cuid())
+  listId    String
+  leadId    String
+  createdAt DateTime @default(now())
+
+  list LeadList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  lead Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, leadId])
+  @@index([listId])
+  @@index([leadId])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leadTags  LeadTag[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model LeadTag {
+  id        String   @id @default(cuid())
+  leadId    String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, tagId])
+  @@index([leadId])
+  @@index([tagId])
+}
+
+model Search {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  userId        String
+  keyword       String
+  country       String?
+  state         String?
+  region        String?
+  city          String?
+  neighborhood  String?
+  postalCode    String?
+  radiusKm      Int?
+  category      String?
+  quantity      Int          @default(50)
+  status        SearchStatus @default(PENDING)
+  resultsCount  Int          @default(0)
+  savedCount    Int          @default(0)
+  creditsUsed   Int          @default(0)
+  filters       Json?
+  errorMessage  String?
+  createdAt     DateTime     @default(now())
+  completedAt   DateTime?
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id])
+  results   SearchResult[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+}
+
+model SearchResult {
+  id        String   @id @default(cuid())
+  searchId  String
+  companyId String
+  rank      Int      @default(0)
+  createdAt DateTime @default(now())
+
+  search  Search  @relation(fields: [searchId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([searchId, companyId])
+  @@index([searchId])
+  @@index([companyId])
+}
+
+model CreditBalance {
+  id          String   @id @default(cuid())
+  workspaceId String   @unique
+  balance     Int      @default(0)
+  lifetime    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model CreditTransaction {
+  id          String       @id @default(cuid())
+  workspaceId String
+  type        CreditTxType
+  amount      Int
+  description String?
+  reference   String?
+  createdAt   DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, createdAt])
+}
+
+model Export {
+  id          String       @id @default(cuid())
+  workspaceId String
+  userId      String
+  type        String
+  format      String       @default("csv")
+  status      ExportStatus @default(PENDING)
+  fileUrl     String?
+  rowCount    Int          @default(0)
+  filters     Json?
+  errorMessage String?
+  createdAt   DateTime     @default(now())
+  completedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+}
+
+model EnrichmentJob {
+  id          String   @id @default(cuid())
+  workspaceId String
+  companyId   String
+  type        String
+  status      JobStatus @default(PENDING)
+  result      Json?
+  errorMessage String?
+  creditsUsed Int      @default(0)
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  workspaceId String?
+  userId      String
+  type        NotificationType
+  title       String
+  body        String?
+  data        Json?
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  userId      String?
+  action      String
+  resource    String?
+  resourceId  String?
+  metadata    Json?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Provider {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  type        String
+  isActive    Boolean  @default(false)
+  config      Json?
+  lastUsedAt  DateTime?
+  lastErrorAt DateTime?
+  errorCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([key])
+}
+
+model Plan {
+  id              String   @id @default(cuid())
+  slug            PlanSlug @unique
+  name            String
+  description     String?
+  priceCents      Int      @default(0)
+  creditsMonthly  Int      @default(0)
+  maxUsers        Int      @default(1)
+  maxSearches     Int      @default(10)
+  maxExports      Int      @default(5)
+  hasApi          Boolean  @default(false)
+  features        Json?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  keyHash     String   @unique
+  prefix      String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
