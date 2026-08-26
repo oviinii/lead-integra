@@ -13,9 +13,8 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-echo "==> 2. Build + start"
-docker compose pull
-docker compose up -d --build
+echo "==> 2. Build + start (force-recreate to pick up .env changes)"
+docker compose up -d --build --force-recreate
 
 echo "==> 3. Aguardando Postgres..."
 until docker compose exec -T postgres pg_isready -U leaduser -d leadgenerator >/dev/null 2>&1; do
