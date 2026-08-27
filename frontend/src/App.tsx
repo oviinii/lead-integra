@@ -7,6 +7,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { LoginPage } from "@/pages/auth/LoginPage";
 import { RegisterPage } from "@/pages/auth/RegisterPage";
+import { LandingPage } from "@/pages/LandingPage";
 import { DashboardPage } from "@/pages/dashboard/DashboardPage";
 import { SearchPage } from "@/pages/search/SearchPage";
 import { SearchResultsPage } from "@/pages/search/SearchResultsPage";
@@ -51,8 +52,10 @@ export default function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
 
+              <Route path="/" element={<LandingPage />} />
+
               <Route
-                path="/"
+                path="/app"
                 element={
                   <ProtectedRoute>
                     <AppShell>
