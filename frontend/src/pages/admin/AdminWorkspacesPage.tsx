@@ -39,6 +39,7 @@ import {
 import { api, getErrorMessage } from "@/lib/api";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export function AdminWorkspacesPage() {
   const queryClient = useQueryClient();
@@ -115,9 +116,20 @@ export function AdminWorkspacesPage() {
                       <div className="font-medium">{w.owner?.name}</div>
                       <div className="text-xs text-muted-foreground">{w.owner?.email}</div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{w.plan}</Badge>
-                    </TableCell>
+                     <TableCell>
+                       <Badge
+                         variant="secondary"
+                         className={cn(
+                           w.plan === "FREE" ? "border-sky-500/30 bg-sky-500/10 text-sky-500"
+                           : w.plan === "STARTER" ? "border-green-500/30 bg-green-500/10 text-green-500"
+                           : w.plan === "PRO" ? "border-purple-500/30 bg-purple-500/10 text-purple-500"
+                           : w.plan === "ENTERPRISE" ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                           : "",
+                         )}
+                       >
+                         {w.plan}
+                       </Badge>
+                     </TableCell>
                     <TableCell className="text-muted-foreground">{w._count?.members || 0}</TableCell>
                     <TableCell className="text-muted-foreground">{formatNumber(w._count?.leads || 0)}</TableCell>
                     <TableCell className="font-medium">{formatNumber(w.creditBalance?.balance || 0)}</TableCell>

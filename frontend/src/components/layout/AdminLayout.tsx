@@ -28,14 +28,14 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/admin", label: "Visão Geral", icon: LayoutDashboard },
-  { to: "/admin/users", label: "Usuários", icon: Users },
-  { to: "/admin/workspaces", label: "Workspaces", icon: Building2 },
-  { to: "/admin/credits", label: "Créditos", icon: CreditCard },
-  { to: "/admin/providers", label: "Providers", icon: Plug },
-  { to: "/admin/plans", label: "Planos", icon: CreditCard },
-  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/admin/settings", label: "Configurações", icon: Settings },
+  { to: "/admin", label: "Visão Geral", icon: LayoutDashboard, color: "text-blue-500", bg: "group-hover:bg-blue-500/10" },
+  { to: "/admin/users", label: "Usuários", icon: Users, color: "text-purple-500", bg: "group-hover:bg-purple-500/10" },
+  { to: "/admin/workspaces", label: "Workspaces", icon: Building2, color: "text-indigo-500", bg: "group-hover:bg-indigo-500/10" },
+  { to: "/admin/credits", label: "Créditos", icon: CreditCard, color: "text-red-500", bg: "group-hover:bg-red-500/10" },
+  { to: "/admin/providers", label: "Providers", icon: Plug, color: "text-amber-500", bg: "group-hover:bg-amber-500/10" },
+  { to: "/admin/plans", label: "Planos", icon: CreditCard, color: "text-emerald-500", bg: "group-hover:bg-emerald-500/10" },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart3, color: "text-cyan-500", bg: "group-hover:bg-cyan-500/10" },
+  { to: "/admin/settings", label: "Configurações", icon: Settings, color: "text-pink-500", bg: "group-hover:bg-pink-500/10" },
 ];
 
 export function AdminLayout() {
@@ -74,7 +74,7 @@ export function AdminLayout() {
                 )
               }
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={`h-4 w-4 ${item.color}`} />
               {item.label}
             </NavLink>
           ))}

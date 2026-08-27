@@ -39,6 +39,7 @@ import {
 import { api, getErrorMessage } from "@/lib/api";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface WorkspaceOption {
   id: string;
@@ -293,11 +294,21 @@ export function AdminCreditsPage() {
                   txList.map((t) => (
                     <TableRow key={t.id}>
                       <TableCell>{t.workspace?.name || "N/A"}</TableCell>
-                      <TableCell>
-                        <Badge variant={t.amount > 0 ? "success" : "destructive"}>
-                          {t.type}
-                        </Badge>
-                      </TableCell>
+                       <TableCell>
+                         <Badge
+                           variant={t.amount > 0 ? "success" : "destructive"}
+                           className={cn(
+                             t.type === "SEARCH" && "border-blue-500/30 bg-blue-500/10 text-blue-500",
+                             t.type === "ENRICHMENT" && "border-amber-500/30 bg-amber-500/10 text-amber-500",
+                             t.type === "EXPORT" && "border-purple-500/30 bg-purple-500/10 text-purple-500",
+                             t.type === "PURCHASE" && "border-green-500/30 bg-green-500/10 text-green-500",
+                             t.type === "BONUS" && "border-pink-500/30 bg-pink-500/10 text-pink-500",
+                             t.type === "REFUND" && "border-cyan-500/30 bg-cyan-500/10 text-cyan-500",
+                           )}
+                         >
+                           {t.type}
+                         </Badge>
+                       </TableCell>
                       <TableCell className={t.amount > 0 ? "text-green-600" : "text-red-600"}>
                         {t.amount > 0 ? "+" : ""}{formatNumber(t.amount)}
                       </TableCell>

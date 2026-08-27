@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { BRAZIL_STATES } from "./data/states";
+import { BRAZIL_CITIES } from "./data/cities";
 
 interface IbgeState {
   id: number;
@@ -42,8 +43,10 @@ export default async function locationsRoutes(app: FastifyInstance): Promise<voi
       );
       if (!res.ok) throw new Error("IBGE unavailable");
       const data: IbgeCity[] = (await res.json()) as any;
-      return data.slice(0, 200);
+      return data;
     } catch {
+      const fallback = BRAZIL_CITIES[state];
+      if (fallback) return fallback;
       return reply.code(502).send({ error: "Não foi possível carregar as cidades." });
     }
   });

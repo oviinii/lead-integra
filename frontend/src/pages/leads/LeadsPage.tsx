@@ -1,19 +1,20 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Trash2, Loader2, Tag as TagIcon, Plus, CheckSquare, Square, ListPlus, X } from "lucide-react";
+import { Download, Trash2, Loader2, Tag as TagIcon, Plus, CheckSquare, Square, ListPlus, X, Edit3, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, getErrorMessage } from "@/lib/api";
 import type { Lead, LeadStatus, Tag, LeadList } from "@/types";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
-import { formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Novo",
@@ -24,13 +25,13 @@ const STATUS_LABELS: Record<LeadStatus, string> = {
   ARCHIVED: "Arquivado",
 };
 
-const STATUS_VARIANT: Record<LeadStatus, "default" | "secondary" | "success" | "warning" | "destructive" | "info"> = {
-  NEW: "info",
-  CONTACTED: "warning",
-  QUALIFIED: "success",
-  CONVERTED: "default",
-  LOST: "destructive",
-  ARCHIVED: "secondary",
+const STATUS_COLORS: Record<LeadStatus, { bg: string; text: string }> = {
+  NEW: { bg: "bg-blue-500", text: "text-white" },
+  CONTACTED: { bg: "bg-amber-500", text: "text-white" },
+  QUALIFIED: { bg: "bg-green-500", text: "text-white" },
+  CONVERTED: { bg: "bg-purple-500", text: "text-white" },
+  LOST: { bg: "bg-red-500", text: "text-white" },
+  ARCHIVED: { bg: "bg-slate-500", text: "text-white" },
 };
 
 export function LeadsPage() {
@@ -42,6 +43,7 @@ export function LeadsPage() {
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
   const [addListDialog, setAddListDialog] = useState(false);
   const [selectedListId, setSelectedListId] = useState("");
+  const [editDialog, setEditDialog] = useState<Lead | null>(null);
 
   const { data: tags } = useQuery({
     queryKey: ["tags"],
@@ -95,6 +97,16 @@ export function LeadsPage() {
       setAddListDialog(false);
       setSelectedListId("");
       setSelectedLeads(new Set());
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (err) => getErrorMessage(err),
+  });
+
+  const updateLead = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: { status?: LeadStatus; notes?: string } }) =>
+      api.patch(`/leads/${id}`, data),
+    onSuccess: () => {
+      setEditDialog(null);
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     },
     onError: (err) => getErrorMessage(err),
@@ -218,22 +230,32 @@ export function LeadsPage() {
                     <TableCell className="text-muted-foreground">{lead.company.city || "—"}{lead.company.state ? `/${lead.company.state}` : ""}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.company.phone || "—"}</TableCell>
                     <TableCell>
-                      <Select
-                        value={lead.status}
-                        onValueChange={(v) => changeStatus.mutate({ id: lead.id, status: v as LeadStatus })}
-                      >
-                        <SelectTrigger className="h-8 w-36">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                            <SelectItem key={k} value={k}>{v}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2">
+                        <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[lead.status].bg}`} />
+                        <Select
+                          value={lead.status}
+                          onValueChange={(v) => changeStatus.mutate({ id: lead.id, status: v as LeadStatus })}
+                        >
+                          <SelectTrigger className="h-8 w-36 border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>{v}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={lead.score >= 70 ? "success" : lead.score >= 40 ? "warning" : "secondary"}>
+                      <Badge
+                        className={cn(
+                          "text-xs gap-1",
+                          lead.score >= 70 ? "border-green-500/30 bg-green-500/10 text-green-500"
+                          : lead.score >= 40 ? "border-amber-500/30 bg-amber-500/10 text-amber-500"
+                          : "border-red-500/30 bg-red-500/10 text-red-500",
+                        )}
+                      >
                         {lead.score} · {lead.scoreLabel || ""}
                       </Badge>
                     </TableCell>
@@ -250,11 +272,22 @@ export function LeadsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{formatDate(lead.createdAt)}</TableCell>
-                    <TableCell>
-                      <Button size="icon" variant="ghost" onClick={() => removeLead.mutate(lead.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+                     <TableCell>
+                       <div className="flex items-center justify-end gap-2">
+                         <Button
+                           size="icon"
+                           variant="ghost"
+                           className="h-7 w-7"
+                           onClick={() => setEditDialog(lead)}
+                           title="Editar lead"
+                         >
+                           <Edit3 className="h-4 w-4" />
+                         </Button>
+                         <Button size="icon" variant="ghost" onClick={() => removeLead.mutate(lead.id)}>
+                           <Trash2 className="h-4 w-4 text-destructive" />
+                         </Button>
+                       </div>
+                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -317,6 +350,103 @@ export function LeadsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {editDialog && (
+        <Dialog open={!!editDialog} onOpenChange={(o) => !o && setEditDialog(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit3 className="h-4 w-4" /> Editar lead — {editDialog.company?.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={editDialog.status}
+                    onValueChange={(v) => setEditDialog({ ...editDialog, status: v as LeadStatus })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Cidade / Estado</Label>
+                  <Input
+                    value={editDialog.company?.city || ""}
+                    readOnly
+                    className="bg-muted/50"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={editDialog.company?.phone || ""}
+                  readOnly
+                  className="bg-muted/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input
+                  value={editDialog.company?.email || ""}
+                  readOnly
+                  className="bg-muted/50"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea
+                  value={editDialog.notes || ""}
+                  onChange={(e) => setEditDialog({ ...editDialog, notes: e.target.value })}
+                  placeholder="Adicione observações sobre este lead..."
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tags</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {editDialog.tags.map((t) => (
+                    <Badge key={t.id} variant="secondary" className="text-xs">
+                      {t.tag.name}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">Gerencie tags em /tags</p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialog(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() =>
+                  updateLead.mutate({
+                    id: editDialog.id,
+                    data: { status: editDialog.status, notes: editDialog.notes ?? undefined },
+                  })
+                }
+                disabled={updateLead.isPending}
+              >
+                {updateLead.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar alterações
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
