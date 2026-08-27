@@ -40,7 +40,7 @@ const items = [
   { to: "/tags", label: "Tags", icon: Tag },
   { to: "/exports", label: "Exportações", icon: Download },
   { to: "/enrichment", label: "Enriquecimento", icon: Sparkles },
-  { to: "/integrations", label: "Integrações", icon: Plug },
+  { to: "/integrations", label: "Integrações", icon: Plug, adminOnly: true },
   { to: "/credits", label: "Plano e créditos", icon: CreditCard },
   { to: "/settings", label: "Configurações", icon: Settings },
 ];
@@ -50,6 +50,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const visibleItems = items.filter((item) => !item.adminOnly || user?.isSuperAdmin);
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -71,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
         <nav className="flex flex-col gap-0.5 p-3">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

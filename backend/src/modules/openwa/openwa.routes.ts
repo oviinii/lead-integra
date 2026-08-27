@@ -3,7 +3,9 @@ import { authenticate, workspaceResolver } from "@/shared/middleware/auth";
 import { validate } from "@/shared/middleware/validate";
 import { z } from "zod";
 import { prisma } from "@/shared/database/prisma";
-import { AppError } from "@/shared/errors/AppError";
+import { AppError, InsufficientCreditsError } from "@/shared/errors/AppError";
+
+const WHATSAPP_CHECK_COST = 1;
 
 const phoneCompanyPairSchema = z.object({
   phone: z.string().min(1),
@@ -28,6 +30,21 @@ const batchCheckWhatsAppSchema = z.object({
 type BatchCheckWhatsAppInput = z.infer<typeof batchCheckWhatsAppSchema>["body"];
 
 const OPENWA_URL = process.env.OPENWA_URL || "http://localhost:8000";
+
+async function deductCredits(workspaceId: string, userId: string, amount: number, description: string, reference?: string): Promise<void> {
+  const balance = await prisma.creditBalance.findUnique({ where: { workspaceId } });
+  if (!balance || balance.balance < amount) throw new InsufficientCreditsError();
+
+  await prisma.$transaction([
+    prisma.creditBalance.update({
+      where: { workspaceId },
+      data: { balance: { decrement: amount } },
+    }),
+    prisma.creditTransaction.create({
+      data: { workspaceId, type: "ENRICHMENT", amount: -amount, description, reference },
+    }),
+  ]);
+}
 
 async function checkWhatsAppViaOpenWA(phone: string): Promise<{ hasWhatsApp: boolean; whatsappNumber?: string }> {
   try {
@@ -72,6 +89,7 @@ export default async function openwaRoutes(app: FastifyInstance): Promise<void> 
         const ctx = (req as any).workspace;
         const body = (req as any).body as CheckWhatsAppInput;
         const result = await checkWhatsAppViaOpenWA(body.phone);
+        await deductCredits(ctx.workspaceId, ctx.userId, WHATSAPP_CHECK_COST, "Verificação WhatsApp", body.companyId);
         await prisma.company.updateMany({
           where: { id: body.companyId, workspaceId: ctx.workspaceId },
           data: {
@@ -89,6 +107,8 @@ export default async function openwaRoutes(app: FastifyInstance): Promise<void> 
       async (req) => {
         const ctx = (req as any).workspace;
         const body = (req as any).body as BatchCheckWhatsAppInput;
+        const totalCost = body.phones.length * WHATSAPP_CHECK_COST;
+        await deductCredits(ctx.workspaceId, ctx.userId, totalCost, `Verificação WhatsApp em lote (${body.phones.length})`);
         const results: Record<string, { hasWhatsApp: boolean; whatsappNumber?: string }> = {};
 
         for (const { phone, companyId } of body.phones) {

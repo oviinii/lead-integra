@@ -7,15 +7,10 @@ import {
   ListChecks,
   Tag,
   Download,
-  Users,
   CheckCircle,
   XCircle,
-  MapPin,
-  Phone,
+  Building2,
   Mail,
-  Globe,
-  Instagram,
-  Star,
   TrendingUp,
   Shield,
   Zap,
@@ -23,13 +18,11 @@ import {
   ArrowRight,
   Menu,
   X,
-  Filter,
-  FileSearch,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+  HelpCircle,
+} from "lucide-react";import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { whatsappLink } from "@/lib/utils";
+import { whatsappLink, cn } from "@/lib/utils";
 import { DashboardMockup } from "@/components/landing/DashboardMockup";
 import { SearchMockup } from "@/components/landing/SearchMockup";
 import { EnrichmentMockup } from "@/components/landing/EnrichmentMockup";
@@ -41,48 +34,64 @@ const FEATURES = [
     title: "Busca de empresas em massa",
     description:
       "Encontre centenas de empresas por segmento, cidade, estado ou palavras-chave. Integração com OpenStreetMap (grátis) e providers pagos.",
+    iconColor: "text-blue-500",
+    bg: "bg-blue-500/10",
   },
   {
     icon: Sparkles,
     title: "Enriquecimento automático",
     description:
       "Receba e-mail, telefone, site, Instagram, Facebook e razão social direto da BrasilAPI, ReceitaWS e Serpro.",
+    iconColor: "text-amber-500",
+    bg: "bg-amber-500/10",
   },
   {
     icon: MessageCircle,
     title: "Verificação de WhatsApp",
     description:
       "Confirme em lote quais números possuem WhatsApp ativo via OpenWA. Clique e abra a conversa em um clique.",
+    iconColor: "text-green-500",
+    bg: "bg-green-500/10",
   },
   {
     icon: ListChecks,
     title: "Listas inteligentes",
     description:
       "Organize leads em listas, exporte para CSV e acompanhe o status de cada negociação.",
+    iconColor: "text-indigo-500",
+    bg: "bg-indigo-500/10",
   },
   {
     icon: Tag,
     title: "Tags e segmentação",
     description:
       "Classifique leads com tags personalizadas e filtre rapidamente o que importa.",
+    iconColor: "text-pink-500",
+    bg: "bg-pink-500/10",
   },
   {
     icon: TrendingUp,
     title: "Dashboard com KPIs",
     description:
       "Acompanhe taxa de conversão, qualidade dos dados, créditos e evolução mensal em tempo real.",
+    iconColor: "text-emerald-500",
+    bg: "bg-emerald-500/10",
   },
   {
     icon: Download,
     title: "Exportação CSV",
     description:
       "Baixe seus leads filtrados em CSV pronto para enviar ao CRM ou equipe de vendas.",
+    iconColor: "text-purple-500",
+    bg: "bg-purple-500/10",
   },
   {
     icon: Shield,
     title: "Multi-workspace e multi-usuário",
     description:
       "Cada equipe tem seu workspace isolado, com papéis OWNER, ADMIN, MEMBER e VIEWER.",
+    iconColor: "text-red-500",
+    bg: "bg-red-500/10",
   },
 ];
 
@@ -141,10 +150,10 @@ const FAQ = [
 ];
 
 const STATS = [
-  { value: "+50 mil", label: "empresas encontradas" },
-  { value: "+30", label: "segmentos suportados" },
-  { value: "97%", label: "precisão dos dados" },
-  { value: "5 min", label: "para configurar" },
+  { value: "+50 mil", label: "empresas encontradas", icon: Building2, color: "text-blue-500", bg: "bg-blue-500/10" },
+  { value: "+30", label: "segmentos suportados", icon: Tag, color: "text-pink-500", bg: "bg-pink-500/10" },
+  { value: "97%", label: "precisão dos dados", icon: CheckCircle, color: "text-green-500", bg: "bg-green-500/10" },
+  { value: "5 min", label: "para configurar", icon: Zap, color: "text-amber-500", bg: "bg-amber-500/10" },
 ];
 
 const CONTACT_WHATSAPP = "5512992100377";
@@ -312,14 +321,17 @@ export function LandingPage() {
 
       {/* STATS */}
       <section className="border-y border-border/60 bg-card/30 py-10">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
-          {STATS.map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-3xl font-bold text-primary sm:text-4xl">{s.value}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
-            </div>
-          ))}
-        </div>
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 sm:px-6 lg:grid-cols-4 lg:px-8">
+            {STATS.map((s) => (
+              <div key={s.label} className="text-center">
+                <div className={cn("mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full", s.bg)}>
+                  <s.icon className={`h-5 w-5 ${s.color}`} />
+                </div>
+                <p className="text-3xl font-bold text-primary sm:text-4xl">{s.value}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
+          </div>
       </section>
 
       {/* FEATURES */}
@@ -337,12 +349,12 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f) => (
               <Card key={f.title} className="border-border/60 bg-card/50 transition-colors hover:border-primary/40">
                 <CardHeader>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <f.icon className="h-5 w-5" />
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", f.bg)}>
+                    <f.icon className={`h-5 w-5 ${f.iconColor}`} />
                   </div>
                   <CardTitle className="mt-4 text-base">{f.title}</CardTitle>
                 </CardHeader>
@@ -368,8 +380,8 @@ export function LandingPage() {
           <div className="mt-16 grid gap-12 lg:grid-cols-3">
             <div>
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  1
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500 text-white">
+                  <Search className="h-5 w-5" />
                 </div>
                 <SearchMockup />
               </div>
@@ -382,8 +394,8 @@ export function LandingPage() {
 
             <div>
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  2
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500 text-white">
+                  <Sparkles className="h-5 w-5" />
                 </div>
                 <EnrichmentMockup />
               </div>
@@ -396,8 +408,8 @@ export function LandingPage() {
 
             <div>
               <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  3
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500 text-white">
+                  <MessageCircle className="h-5 w-5" />
                 </div>
                 <LeadsMockup />
               </div>
@@ -451,17 +463,22 @@ export function LandingPage() {
               </div>
               <div className="space-y-3">
                 {[
-                  { name: "Padaria São José", phone: "(12) 98765-4321", wa: true },
-                  { name: "Mercado Central", phone: "(12) 99876-5432", wa: true },
-                  { name: "Auto Posto Brasil", phone: "(12) 97654-3210", wa: false },
-                  { name: "Farmácia Vida", phone: "(12) 91234-5678", wa: true },
-                ].map((lead) => (
-                  <div
-                    key={lead.name}
-                    className="flex items-center justify-between rounded-lg border border-border bg-background p-3"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{lead.name}</p>
+                   { name: "Padaria São José", phone: "(12) 98765-4321", wa: true, category: "Alimentação", catColor: "bg-amber-500/10 text-amber-600" },
+                   { name: "Mercado Central", phone: "(12) 99876-5432", wa: true, category: "Varejo", catColor: "bg-blue-500/10 text-blue-600" },
+                   { name: "Auto Posto Brasil", phone: "(12) 97654-3210", wa: false, category: "Serviços", catColor: "bg-indigo-500/10 text-indigo-600" },
+                   { name: "Farmácia Vida", phone: "(12) 91234-5678", wa: true, category: "Saúde", catColor: "bg-green-500/10 text-green-600" },
+                 ].map((lead) => (
+                   <div
+                     key={lead.name}
+                     className="flex items-center justify-between rounded-lg border border-border bg-background p-3"
+                   >
+                     <div>
+                       <div className="flex items-center gap-2">
+                         <p className="text-sm font-medium">{lead.name}</p>
+                         <Badge variant="outline" className={`text-[10px] ${lead.catColor}`}>
+                           {lead.category}
+                         </Badge>
+                       </div>
                       <p className="text-xs text-muted-foreground">{lead.phone}</p>
                     </div>
                     {lead.wa ? (
@@ -483,6 +500,65 @@ export function LandingPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CREDIT CONSUMPTION */}
+      <section className="border-y border-border/60 bg-card/30 py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <Badge variant="secondary" className="mb-4">
+              Consumo de créditos
+            </Badge>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Cada ação consome 1 crédito
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Transparência total: você vê cada crédito gasto em tempo real na página de créditos.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-border/60 bg-card/50 text-center">
+              <CardContent className="pt-6">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+                  <Search className="h-6 w-6" />
+                </div>
+                <p className="text-2xl font-bold text-primary">1</p>
+                <p className="mt-1 text-sm text-muted-foreground">por empresa encontrada</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/50 text-center">
+              <CardContent className="pt-6">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500/10 text-amber-500">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <p className="text-2xl font-bold text-primary">1</p>
+                <p className="mt-1 text-sm text-muted-foreground">por campo enriquecido</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/50 text-center">
+              <CardContent className="pt-6">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                  <MessageCircle className="h-6 w-6" />
+                </div>
+                <p className="text-2xl font-bold text-primary">1</p>
+                <p className="mt-1 text-sm text-muted-foreground">por verificação WhatsApp</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 bg-card/50 text-center">
+              <CardContent className="pt-6">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                  <Download className="h-6 w-6" />
+                </div>
+                <p className="text-2xl font-bold text-primary">1</p>
+                <p className="mt-1 text-sm text-muted-foreground">por exportação CSV</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -587,11 +663,14 @@ export function LandingPage() {
                 key={item.q}
                 className="rounded-lg border border-border bg-card"
               >
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="flex w-full items-center justify-between px-6 py-4 text-left"
-                >
-                  <span className="font-medium">{item.q}</span>
+                 <button
+                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                   className="flex w-full items-center justify-between px-6 py-4 text-left"
+                 >
+                   <span className="flex items-center gap-2 font-medium">
+                     <HelpCircle className="h-4 w-4 text-primary" />
+                     {item.q}
+                   </span>
                   <span
                     className={`text-2xl text-primary transition-transform ${
                       openFaq === i ? "rotate-45" : ""

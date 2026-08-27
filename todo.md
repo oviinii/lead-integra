@@ -244,6 +244,21 @@ npx prisma generate
 
 ---
 
+## 🔧 Demandas Atuais
+
+### 🔴 Pendente (Prioridade Alta)
+
+| Nº | Tarefa | Observação |
+|----|--------|-----------|
+| 1 | **Dropdown transparente em SearchPage** | Root cause: `tailwind.config.js` falta a cor `popover` → `bg-popover` não gera CSS. Fix: adicionar `popover`/`popover-foreground` ao theme.extend.colors |
+| 2 | **Bullet vermelho "Personalizado" fixo no menu da LP** | O `<div className="absolute -top-3 ...">` do plano personalizado na LandingPage está fixo/visível no menu. Investigar z-index ou renderização |
+| 3 | **Empresas adicionadas como lead devem aparecer na Enriquecimento** | Leads criados/por lista não filtram para a página de enriquecimento. Verificar query/filtro na EnrichmentPage e backend |
+| 4 | **Menu Integrações só para usuários autorizados** | O link `/integrations` aparece para todos. Deve estar condicionado a permissão (ex: isSuperAdmin ou role específico) no AppShell |
+| 5 | **Créditos gastos em enriquecimento aparecer na página de créditos/LP** | O consumo de créditos no enriquecimento não reflete na CreditsPage nem na LP. Verificar deduction de créditos no backend + exibição no frontend |
+| 6 | **Adicionar ícones e mais cores no sistema** | Revisar uso de lucide-react icônes e aplicar paleta de cores mais viva (primary/vermelho dominante) em cards, badges, botões |
+
+---
+
 ## 🚀 Próximas Ações (recomendadas)
 
 1. **Limpeza de lint** — Remover imports não usados e `any` types (94 warnings backend, 111 frontend — 0 erros)

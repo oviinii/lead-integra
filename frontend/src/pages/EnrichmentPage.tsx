@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Clock, CheckCircle, XCircle, TrendingUp, MessageCircle, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, TrendingUp, MessageCircle, RefreshCw, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, getErrorMessage } from "@/lib/api";
 import type { Lead, LeadStatus } from "@/types";
-import { formatDateTime, formatPhone, whatsappLink } from "@/lib/utils";
+import { formatPhone, whatsappLink } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
@@ -72,16 +71,14 @@ export function EnrichmentPage() {
   });
 
   const allLeads = leads?.items ?? [];
-  const leadsWithPhone = allLeads.filter((l) => l.company.phone || l.company.whatsapp);
-
   const displayedLeads = viewMode === "verified"
-    ? leadsWithPhone.filter((l) => l.company.whatsapp)
-    : leadsWithPhone.filter((l) => !l.company.whatsapp);
+    ? allLeads.filter((l) => l.company.whatsapp)
+    : allLeads;
 
-  const totalWithPhone = leadsWithPhone.length;
-  const totalVerified = leadsWithPhone.filter((l) => l.company.whatsapp).length;
-  const totalPending = totalWithPhone - totalVerified;
-  const progressPct = totalWithPhone > 0 ? Math.round((totalVerified / totalWithPhone) * 100) : 0;
+  const totalLeads = allLeads.length;
+  const totalVerified = allLeads.filter((l) => l.company.whatsapp).length;
+  const totalPending = totalLeads - totalVerified;
+  const progressPct = totalLeads > 0 ? Math.round((totalVerified / totalLeads) * 100) : 0;
 
   const toggleLead = (leadId: string) => {
     setSelectedLeads((prev) => {
@@ -120,15 +117,15 @@ export function EnrichmentPage() {
               <CheckCircle className="h-3 w-3" /> OpenWA online
             </Badge>
           )}
-          <Select value={viewMode} onValueChange={(v) => setViewMode(v as "pending" | "verified")}>
-            <SelectTrigger className="w-52">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">Sem WhatsApp ({totalPending})</SelectItem>
-              <SelectItem value="verified">Com WhatsApp ({totalVerified})</SelectItem>
-            </SelectContent>
-          </Select>
+            <Select value={viewMode} onValueChange={(v) => setViewMode(v as "pending" | "verified")}>
+              <SelectTrigger className="w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Para verificar ({totalPending})</SelectItem>
+                <SelectItem value="verified">Verificados ({totalVerified})</SelectItem>
+              </SelectContent>
+            </Select>
         </div>
       </div>
 
@@ -138,9 +135,9 @@ export function EnrichmentPage() {
             <TrendingUp className="h-4 w-4" /> Progresso
           </CardTitle>
           <CardDescription>
-            {totalWithPhone > 0
-              ? `${totalVerified} de ${totalWithPhone} leads com WhatsApp verificado (${progressPct}%)`
-              : "Nenhum lead com telefone cadastrado."}
+            {totalLeads > 0
+              ? `${totalVerified} de ${totalLeads} leads com WhatsApp verificado (${progressPct}%)`
+              : "Nenhum lead cadastrado. Adicione leads durante a busca de empresas."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -153,7 +150,7 @@ export function EnrichmentPage() {
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{totalVerified} com WhatsApp</span>
-              <span>{totalPending} sem WhatsApp</span>
+              <span>{totalPending} para verificar</span>
             </div>
           </div>
         </CardContent>
@@ -197,7 +194,7 @@ export function EnrichmentPage() {
             <div className="p-6 text-center text-sm text-muted-foreground">
               {viewMode === "verified"
                 ? "Nenhum lead com WhatsApp verificado ainda."
-                : "Todos os leads com telefone já têm WhatsApp verificado!"}
+                : "Todos os leads já têm WhatsApp verificado!"}
             </div>
           ) : (
             <div className="border-t">
