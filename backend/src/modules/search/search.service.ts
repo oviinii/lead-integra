@@ -222,7 +222,16 @@ export async function getSearch(
     where: { id: searchId, workspaceId },
     include: {
       results: {
-        include: { company: true },
+        include: {
+          company: {
+            include: {
+              leads: {
+                where: { workspaceId },
+                select: { id: true },
+              },
+            },
+          },
+        },
         orderBy: { rank: "desc" },
       },
     },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Tag as TagIcon, Loader2 } from "lucide-react";
+import { Plus, Trash2, Tag as TagIcon, Loader2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { api, getErrorMessage } from "@/lib/api";
 import type { Tag } from "@/types";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Link } from "react-router-dom";
 
 export function TagsPage() {
   const queryClient = useQueryClient();
@@ -80,14 +81,23 @@ export function TagsPage() {
           ) : !data?.tags?.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma tag. Crie a primeira acima.</p>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-2">
               {data.tags.map((t) => (
-                <Badge key={t.id} style={{ backgroundColor: t.color || "#6366f1", color: "#fff" }} className="gap-2 px-3 py-1 text-sm">
-                  <TagIcon className="h-3 w-3" /> {t.name}
-                  <button onClick={() => remove.mutate(t.id)} className="ml-1">
-                    <Trash2 className="h-3 w-3" />
-                  </button>
-                </Badge>
+                <Link
+                  key={t.id}
+                  to={`/tags/${t.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`h-4 w-4 rounded ${t.color ? "bg-[${t.color}]" : "bg-primary"}`}>
+                      <TagIcon className="h-3 w-3 text-white" />
+                    </div>
+                    <div className="font-medium">{t.name}</div>
+                  </div>
+                  <Button size="icon" variant="ghost" className="h-7 w-7">
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </Link>
               ))}
             </div>
           )}

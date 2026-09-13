@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Loader2, ListChecks, Edit, Download, X } from "lucide-react";
+import { Plus, Trash2, Loader2, ListChecks, Edit, Download, X, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 const STATUS_LABELS: Record<LeadStatus, string> = {
   NEW: "Novo",
@@ -182,9 +183,13 @@ export function ListsPage() {
           ) : (
             <div className="space-y-2">
               {data.lists.map((l) => (
-                <div key={l.id} className="flex items-center justify-between rounded border p-3">
+                <Link
+                  key={l.id}
+                  to={`/lists/${l.id}`}
+                  className="flex items-center justify-between rounded border p-3 hover:bg-accent"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="h-4 w-4 rounded" style={{ backgroundColor: l.color || "#6366f1" }} />
+                    <div className={`h-4 w-4 rounded ${l.color ? "bg-[${l.color}]" : "bg-primary"}`} />
                     <div>
                       <div className="font-medium">{l.name}</div>
                       {l.description && <p className="text-xs text-muted-foreground">{l.description}</p>}
@@ -192,17 +197,11 @@ export function ListsPage() {
                     <Badge variant="secondary" className="text-xs">{l._count?.items || 0} itens</Badge>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setDetailOpen(l)}>
-                      <ListChecks className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => startEdit(l)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => remove.mutate(l.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
+                    <Button size="icon" variant="ghost" className="h-7 w-7">
+                      <ArrowUpRight className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -221,12 +220,14 @@ export function ListsPage() {
               <p className="text-sm text-muted-foreground">Esta lista está vazia.</p>
             )}
 
-            {detailData?.list?.items?.length ? (
-              <>
-                <Button size="sm" variant="outline" onClick={exportCsv}>
-                  <Download className="h-4 w-4" /> Exportar CSV
-                </Button>
-                <Table>
+{detailData?.list?.items?.length ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={exportCsv}>
+                      <Download className="h-4 w-4" /> Exportar CSV
+                    </Button>
+                  </div>
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Empresa</TableHead>

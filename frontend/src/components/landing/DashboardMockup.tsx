@@ -1,4 +1,4 @@
-import { TrendingUp, Users, MessageCircle, Mail } from "lucide-react";
+import { TrendingUp, Users, MessageCircle, Mail, Search, Sparkles, Download, Tag } from "lucide-react";
 
 export function DashboardMockup() {
   return (
@@ -29,16 +29,18 @@ export function DashboardMockup() {
 
         <div className="grid grid-cols-2 gap-3">
           {[
-            { icon: Users, label: "Empresas", value: "1.247", color: "text-blue-500" },
-            { icon: TrendingUp, label: "Leads", value: "382", color: "text-green-500" },
-            { icon: MessageCircle, label: "WhatsApp", value: "271", color: "text-emerald-500" },
-            { icon: Mail, label: "Com e-mail", value: "198", color: "text-amber-500" },
+            { icon: Users, label: "Empresas", value: "1.247", color: "text-blue-500", bg: "bg-blue-500/10" },
+            { icon: TrendingUp, label: "Leads", value: "382", color: "text-purple-500", bg: "bg-purple-500/10" },
+            { icon: MessageCircle, label: "WhatsApp", value: "271", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { icon: Mail, label: "Com e-mail", value: "198", color: "text-amber-500", bg: "bg-amber-500/10" },
           ].map((kpi) => (
             <div
               key={kpi.label}
               className="rounded-lg border border-border bg-background p-3"
             >
-              <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+              <div className={cn("flex h-8 w-8 items-center justify-center rounded-lg", kpi.bg)}>
+                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
+              </div>
               <p className="mt-2 text-2xl font-bold">{kpi.value}</p>
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
             </div>
@@ -64,4 +66,8 @@ export function DashboardMockup() {
       </div>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(" ");
 }

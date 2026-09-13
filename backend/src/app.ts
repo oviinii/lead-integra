@@ -22,6 +22,7 @@ import notificationsRoutes from "@/modules/notifications/notifications.routes";
 import locationsRoutes from "@/modules/locations/locations.routes";
 import enrichmentRoutes from "@/modules/enrichment/enrichment.routes";
 import openwaRoutes from "@/modules/openwa/openwa.routes";
+import emailCampaignsRoutes from "@/modules/email-campaigns/email-campaigns.routes";
 
 export async function buildApp(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -103,6 +104,7 @@ export async function buildApp(): Promise<FastifyInstance> {
     await api.register(locationsRoutes, { prefix: "/locations" });
     await api.register(enrichmentRoutes, { prefix: "/enrichment" });
     await api.register(openwaRoutes, { prefix: "/openwa" });
+    await api.register(emailCampaignsRoutes, { prefix: "/email-campaigns" });
   }, { prefix: "/api" });
 
   return app;

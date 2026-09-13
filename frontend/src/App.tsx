@@ -16,6 +16,7 @@ import { CompanyDetailPage } from "@/pages/companies/CompanyDetailPage";
 import { TagsPage } from "@/pages/tags/TagsPage";
 import { ListsPage } from "@/pages/lists/ListsPage";
 import { ExportsPage } from "@/pages/exports/ExportsPage";
+import { CampaignsPage } from "@/pages/campaigns/CampaignsPage";
 import { EnrichmentPage } from "@/pages/EnrichmentPage";
 import { IntegrationsPage } from "@/pages/IntegrationsPage";
 import { CreditsPage } from "@/pages/CreditsPage";
@@ -126,6 +127,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <AppShell><ExportsPage /></AppShell>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/campaigns"
+                element={
+                  <ProtectedRoute>
+                    <AppShell><CampaignsPage /></AppShell>
                   </ProtectedRoute>
                 }
               />

@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, FileText, Loader2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { formatDateTime } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 export function ExportsPage() {
   const { data, isLoading } = useQuery({
@@ -83,12 +84,22 @@ export function ExportsPage() {
           ) : !data?.exports?.length ? (
             <p className="text-sm text-muted-foreground">Nenhuma exportação registrada.</p>
           ) : (
-            <div className="divide-y">
+            <div className="space-y-3">
               {data.exports.map((e: any) => (
-                <div key={e.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="font-medium">{e.type}</div>
-                    <div className="text-xs text-muted-foreground">{formatDateTime(e.createdAt)} · {e.rowCount} linhas</div>
+                <div
+                  key={e.id}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`grid h-8 w-8 place-items-center rounded-lg ${
+                      e.type === "leads" ? "bg-blue-500/10 text-blue-500" : "bg-purple-500/10 text-purple-500"
+                    }`}>
+                      {e.type === "leads" ? <Download className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <div className="font-medium">{e.type === "leads" ? "Exportação de Leads" : "Exportação de Empresas"}</div>
+                      <div className="text-xs text-muted-foreground">{formatDateTime(e.createdAt)} · {e.rowCount} linhas</div>
+                    </div>
                   </div>
                   <Badge variant={e.status === "COMPLETED" ? "success" : e.status === "FAILED" ? "destructive" : "secondary"}>
                     {e.status}

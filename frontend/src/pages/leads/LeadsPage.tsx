@@ -196,6 +196,7 @@ export function LeadsPage() {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Cidade</TableHead>
                   <TableHead>Telefone</TableHead>
+                  <TableHead>E-mail</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Score</TableHead>
                   <TableHead>Tags</TableHead>
@@ -229,6 +230,7 @@ export function LeadsPage() {
                     <TableCell className="text-muted-foreground">{lead.company.category || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.company.city || "—"}{lead.company.state ? `/${lead.company.state}` : ""}</TableCell>
                     <TableCell className="text-muted-foreground">{lead.company.phone || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{lead.company.email || "—"}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[lead.status].bg}`} />

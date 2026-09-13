@@ -101,6 +101,7 @@ model User {
   refreshTokens      RefreshToken[]
   passwordResets     PasswordReset[]
   apiKeys            ApiKey[]
+  emailCampaigns     EmailCampaign[]
 
   @@index([email])
 }
@@ -156,6 +157,7 @@ model Workspace {
   enrichmentJobs     EnrichmentJob[]
   notifications      Notification[]
   auditLogs          AuditLog[]
+  emailCampaigns     EmailCampaign[]
 
   @@index([slug])
   @@index([ownerId])
@@ -262,6 +264,7 @@ model Lead {
   creator   User?        @relation("LeadCreator", fields: [createdById], references: [id])
   lists     LeadListItem[]
   tags      LeadTag[]
+  emailLogs EmailLog[]
 
   @@unique([workspaceId, companyId])
   @@index([workspaceId])
@@ -281,6 +284,7 @@ model LeadList {
 
   workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   items     LeadListItem[]
+  emailCampaigns EmailCampaign[]
 
   @@index([workspaceId])
 }
@@ -308,6 +312,7 @@ model Tag {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   leadTags  LeadTag[]
+  emailCampaigns EmailCampaign[]
 
   @@unique([workspaceId, name])
   @@index([workspaceId])
@@ -524,4 +529,64 @@ model ApiKey {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  FAILED
+}
+
+enum EmailLogStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model EmailCampaign {
+  id              String         @id @default(cuid())
+  workspaceId     String
+  createdById     String
+  name            String
+  subject         String
+  bodyContent     String
+  status          CampaignStatus @default(DRAFT)
+  totalRecipients Int            @default(0)
+  sentCount       Int            @default(0)
+  failedCount     Int            @default(0)
+  listId          String?
+  tagId           String?
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator   User      @relation(fields: [createdById], references: [id])
+  list      LeadList? @relation(fields: [listId], references: [id], onDelete: SetNull)
+  tag       Tag?      @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  logs      EmailLog[]
+
+  @@index([workspaceId])
+  @@index([workspaceId, status])
+}
+
+model EmailLog {
+  id          String         @id @default(cuid())
+  campaignId  String
+  leadId      String?
+  recipient   String
+  status      EmailLogStatus @default(PENDING)
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime       @default(now())
+
+  campaign EmailCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  lead     Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  @@index([campaignId])
+  @@index([leadId])
+  @@index([status])
 }

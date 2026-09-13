@@ -1,4 +1,4 @@
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, Building2, Tag } from "lucide-react";
 
 export function SearchMockup() {
   return (
@@ -8,7 +8,9 @@ export function SearchMockup() {
       </div>
       <div className="space-y-2 p-3">
         <div className="rounded-md border border-border bg-background px-3 py-2 text-xs flex items-center gap-2">
-          <Search className="h-3 w-3 text-muted-foreground" />
+          <div className="grid h-6 w-6 place-items-center rounded-md bg-purple-500/10 text-purple-500">
+            <Search className="h-3 w-3" />
+          </div>
           <span>padarias em Taubaté</span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-xs">
@@ -26,17 +28,20 @@ export function SearchMockup() {
         </div>
         <div className="space-y-1.5 pt-1">
           {[
-            "Padaria São José",
-            "Padaria Central",
-            "Padaria Pão Quente",
-            "Padaria do Bairro",
-          ].map((name) => (
+            { name: "Padaria São José", category: "Alimentação" },
+            { name: "Padaria Central", category: "Alimentação" },
+            { name: "Padaria Pão Quente", category: "Alimentação" },
+            { name: "Padaria do Bairro", category: "Alimentação" },
+          ].map((item) => (
             <div
-              key={name}
+              key={item.name}
               className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5"
             >
-              <MapPin className="h-3 w-3 flex-shrink-0 text-primary" />
-              <span className="text-xs">{name}</span>
+              <div className="grid h-6 w-6 place-items-center rounded-md bg-blue-500/10 text-blue-500">
+                <Building2 className="h-3 w-3" />
+              </div>
+              <span className="text-xs">{item.name}</span>
+              <span className="text-[10px] text-muted-foreground">{item.category}</span>
             </div>
           ))}
         </div>

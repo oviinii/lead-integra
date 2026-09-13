@@ -17,6 +17,7 @@ import {
   Moon,
   Menu,
   X,
+  Mail,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,16 +34,17 @@ import {
 import { cn } from "@/lib/utils";
 
 const items = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/search", label: "Encontrar empresas", icon: Search },
-  { to: "/leads", label: "Leads", icon: Users },
-  { to: "/lists", label: "Listas", icon: ListChecks },
-  { to: "/tags", label: "Tags", icon: Tag },
-  { to: "/exports", label: "Exportações", icon: Download },
-  { to: "/enrichment", label: "Enriquecimento", icon: Sparkles },
-  { to: "/integrations", label: "Integrações", icon: Plug, adminOnly: true },
-  { to: "/credits", label: "Plano e créditos", icon: CreditCard },
-  { to: "/settings", label: "Configurações", icon: Settings },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-blue-500", bg: "group-hover:bg-blue-500/10" },
+  { to: "/search", label: "Encontrar empresas", icon: Search, color: "text-purple-500", bg: "group-hover:bg-purple-500/10" },
+  { to: "/leads", label: "Leads", icon: Users, color: "text-indigo-500", bg: "group-hover:bg-indigo-500/10" },
+  { to: "/lists", label: "Listas", icon: ListChecks, color: "text-emerald-500", bg: "group-hover:bg-emerald-500/10" },
+  { to: "/tags", label: "Tags", icon: Tag, color: "text-amber-500", bg: "group-hover:bg-amber-500/10" },
+  { to: "/campaigns", label: "E-mail Marketing", icon: Mail, color: "text-blue-600", bg: "group-hover:bg-blue-600/10" },
+  { to: "/exports", label: "Exportações", icon: Download, color: "text-red-500", bg: "group-hover:bg-red-500/10" },
+  { to: "/enrichment", label: "Enriquecimento", icon: Sparkles, color: "text-pink-500", bg: "group-hover:bg-pink-500/10" },
+  { to: "/integrations", label: "Integrações", icon: Plug, adminOnly: true, color: "text-cyan-500", bg: "group-hover:bg-cyan-500/10" },
+  { to: "/credits", label: "Plano e créditos", icon: CreditCard, color: "text-orange-500", bg: "group-hover:bg-orange-500/10" },
+  { to: "/settings", label: "Configurações", icon: Settings, color: "text-slate-500", bg: "group-hover:bg-slate-500/10" },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -80,12 +82,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setMobileOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors group",
                   isActive ? "bg-primary text-primary-foreground" : "hover:bg-accent",
                 )
               }
             >
-              <item.icon className="h-4 w-4" />
+              <item.icon className={`h-4 w-4 ${item.color} ${item.bg}`} />
               {item.label}
             </NavLink>
           ))}

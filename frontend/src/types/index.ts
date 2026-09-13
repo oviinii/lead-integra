@@ -103,3 +103,24 @@ export interface DashboardData {
   credits: { balance: number; lifetime: number };
   exports: { total: number };
 }
+
+export type CampaignStatus = "DRAFT" | "SCHEDULED" | "SENDING" | "COMPLETED" | "FAILED";
+
+export interface EmailCampaign {
+  id: string;
+  name: string;
+  subject: string;
+  bodyContent: string;
+  status: CampaignStatus;
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  listId?: string | null;
+  tagId?: string | null;
+  list?: { id: string; name: string } | null;
+  tag?: { id: string; name: string } | null;
+  scheduledAt?: string | null;
+  sentAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

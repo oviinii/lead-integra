@@ -12,11 +12,13 @@ function MetricCard({
   label,
   value,
   hint,
+  color = "bg-primary/10 text-primary",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string | number;
   hint?: string;
+  color?: string;
 }) {
   return (
     <Card>
@@ -26,7 +28,7 @@ function MetricCard({
           <p className="mt-2 text-3xl font-semibold">{value}</p>
           {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+        <div className={`grid h-10 w-10 place-items-center rounded-lg ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
       </CardContent>
@@ -57,10 +59,10 @@ export function DashboardPage() {
           </>
         ) : (
           <>
-            <MetricCard icon={Building2} label="Empresas encontradas" value={formatNumber(data.companies.total)} />
-            <MetricCard icon={Users} label="Leads salvos" value={formatNumber(data.leads.total)} hint={`${data.leads.thisMonth} este mês`} />
-            <MetricCard icon={Search} label="Pesquisas realizadas" value={formatNumber(data.searches.total)} />
-            <MetricCard icon={Sparkles} label="Créditos" value={formatNumber(data.credits.balance)} hint={`${formatNumber(data.credits.lifetime)} total`} />
+            <MetricCard icon={Building2} label="Empresas encontradas" value={formatNumber(data.companies.total)} color="bg-blue-500/10 text-blue-500" />
+            <MetricCard icon={Users} label="Leads salvos" value={formatNumber(data.leads.total)} hint={`${data.leads.thisMonth} este mês`} color="bg-purple-500/10 text-purple-500" />
+            <MetricCard icon={Search} label="Pesquisas realizadas" value={formatNumber(data.searches.total)} color="bg-indigo-500/10 text-indigo-500" />
+            <MetricCard icon={Sparkles} label="Créditos" value={formatNumber(data.credits.balance)} hint={`${formatNumber(data.credits.lifetime)} total`} color="bg-amber-500/10 text-amber-500" />
           </>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { Search, Loader2, MapPin, Building2 } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Search, Loader2, MapPin, Building2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -249,32 +249,42 @@ export function SearchPage() {
         </CardContent>
       </Card>
 
-      <Card>
+<Card>
         <CardHeader>
-          <CardTitle>Pesquisas recentes</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-500/10 text-purple-500">
+              <Search className="h-4 w-4" />
+            </div>
+            Pesquisas recentes
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {!searches?.items?.length ? (
-            <EmptyState
-              icon={<MapPin className="h-10 w-10" />}
-              title="Nenhuma pesquisa ainda"
-              description="Faça sua primeira busca acima para encontrar empresas."
-            />
+            <div className="text-center py-12">
+              <div className="grid h-16 w-16 place-items-center rounded-full bg-muted mx-auto mb-4">
+                <MapPin className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <h3 className="font-medium">Nenhuma pesquisa ainda</h3>
+              <p className="text-sm text-muted-foreground mt-1">Faça sua primeira busca acima para encontrar empresas.</p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {searches.items.map((s) => (
-                <button
+                <Link
                   key={s.id}
-                  onClick={() => navigate(`/search/${s.id}`)}
-                  className="flex w-full items-center justify-between rounded-lg border p-3 text-left hover:bg-accent"
+                  to={`/search/${s.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent"
                 >
-                  <div>
-                    <div className="flex items-center gap-2 font-medium">
-                      <Building2 className="h-4 w-4 text-primary" /> {s.keyword}
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                      <Building2 className="h-4 w-4" />
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {[s.city, s.state].filter(Boolean).join(" · ") || "Sem localização"} ·{" "}
-                      {new Date(s.createdAt).toLocaleString("pt-BR")}
+                    <div>
+                      <div className="font-medium">{s.keyword}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[s.city, s.state].filter(Boolean).join(" · ") || "Sem localização"} ·{" "}
+                        {new Date(s.createdAt).toLocaleString("pt-BR")}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -290,8 +300,9 @@ export function SearchPage() {
                       {s.status}
                     </Badge>
                     <span className="text-sm text-muted-foreground">{s.resultsCount} resultados</span>
+                    <ArrowUpRight className="h-4 w-4 opacity-60" />
                   </div>
-                </button>
+                </Link>
               ))}
             </div>
           )}

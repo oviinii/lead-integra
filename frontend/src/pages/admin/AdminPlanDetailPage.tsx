@@ -101,7 +101,10 @@ export function AdminPlanDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-4 w-4" /> Detalhes do Plano
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-purple-500/10 text-purple-500">
+              <CreditCard className="h-4 w-4" />
+            </div>
+            Detalhes do Plano
           </CardTitle>
           <Badge variant={p.isActive ? "success" : "secondary"}>
             {p.isActive ? "Ativo" : "Inativo"}
