@@ -4,30 +4,74 @@ import { sendEmail } from "@/shared/utils/email";
 import { logAudit } from "@/shared/utils/audit";
 import { CreateCampaignInput, ListCampaignsQuery, UpdateCampaignInput } from "./email-campaigns.schema";
 
+interface RecipientItem {
+  leadId?: string | null;
+  email: string;
+  name: string;
+}
+
+async function getEligibleRecipients(
+  workspaceId: string,
+  listId?: string | null,
+  tagId?: string | null,
+): Promise<RecipientItem[]> {
+  if (listId) {
+    const leads = await prisma.lead.findMany({
+      where: {
+        workspaceId,
+        lists: { some: { listId } },
+        company: { email: { not: null } },
+      },
+      include: { company: { select: { email: true, name: true } } },
+    });
+    return leads
+      .filter((l) => Boolean(l.company.email && l.company.email.trim().length > 0))
+      .map((l) => ({ leadId: l.id, email: l.company.email!.trim(), name: l.company.name }));
+  }
+
+  if (tagId) {
+    const leads = await prisma.lead.findMany({
+      where: {
+        workspaceId,
+        tags: { some: { tagId } },
+        company: { email: { not: null } },
+      },
+      include: { company: { select: { email: true, name: true } } },
+    });
+    return leads
+      .filter((l) => Boolean(l.company.email && l.company.email.trim().length > 0))
+      .map((l) => ({ leadId: l.id, email: l.company.email!.trim(), name: l.company.name }));
+  }
+
+  // Fetch ALL companies in the workspace with valid email (from search results or leads)
+  const companies = await prisma.company.findMany({
+    where: {
+      workspaceId,
+      email: { not: null },
+    },
+    include: {
+      leads: {
+        where: { workspaceId },
+        select: { id: true },
+      },
+    },
+  });
+
+  return companies
+    .filter((c) => Boolean(c.email && c.email.trim().length > 0))
+    .map((c) => ({
+      leadId: c.leads[0]?.id || null,
+      email: c.email!.trim(),
+      name: c.name,
+    }));
+}
+
 export async function createCampaign(
   workspaceId: string,
   userId: string,
   data: CreateCampaignInput,
 ) {
-  // Find leads matching the filters that have a valid email
-  const whereLead: any = {
-    workspaceId,
-    company: { email: { not: null } },
-  };
-
-  if (data.listId) {
-    whereLead.lists = { some: { listId: data.listId } };
-  }
-  if (data.tagId) {
-    whereLead.tags = { some: { tagId: data.tagId } };
-  }
-
-  const eligibleLeads = await prisma.lead.findMany({
-    where: whereLead,
-    include: { company: { select: { email: true, name: true } } },
-  });
-
-  const totalRecipients = eligibleLeads.length;
+  const recipients = await getEligibleRecipients(workspaceId, data.listId, data.tagId);
 
   const campaign = await prisma.emailCampaign.create({
     data: {
@@ -40,7 +84,7 @@ export async function createCampaign(
       tagId: data.tagId || null,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       status: data.scheduledAt ? "SCHEDULED" : "DRAFT",
-      totalRecipients,
+      totalRecipients: recipients.length,
     },
     include: {
       list: { select: { id: true, name: true } },
@@ -53,7 +97,7 @@ export async function createCampaign(
     workspaceId,
     action: "email_campaign.create",
     resourceId: campaign.id,
-    metadata: { name: campaign.name, totalRecipients },
+    metadata: { name: campaign.name, totalRecipients: recipients.length },
   });
 
   return { campaign };
@@ -117,18 +161,10 @@ export async function updateCampaign(
     throw new AppError("Não é possível alterar uma campanha em andamento ou concluída", 400);
   }
 
-  // Recalculate recipient count if list or tag changed
   const listId = data.listId !== undefined ? data.listId : existing.listId;
   const tagId = data.tagId !== undefined ? data.tagId : existing.tagId;
 
-  const whereLead: any = {
-    workspaceId,
-    company: { email: { not: null } },
-  };
-  if (listId) whereLead.lists = { some: { listId } };
-  if (tagId) whereLead.tags = { some: { tagId } };
-
-  const totalRecipients = await prisma.lead.count({ where: whereLead });
+  const recipients = await getEligibleRecipients(workspaceId, listId, tagId);
 
   const updated = await prisma.emailCampaign.update({
     where: { id: campaignId },
@@ -139,7 +175,7 @@ export async function updateCampaign(
       listId,
       tagId,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : existing.scheduledAt,
-      totalRecipients,
+      totalRecipients: recipients.length,
     },
     include: {
       list: { select: { id: true, name: true } },
@@ -177,27 +213,14 @@ export async function sendCampaign(workspaceId: string, userId: string, campaign
     throw new AppError("Esta campanha já foi enviada ou está em andamento", 400);
   }
 
-  // Update status to SENDING
+  const recipients = await getEligibleRecipients(workspaceId, campaign.listId, campaign.tagId);
+
   await prisma.emailCampaign.update({
     where: { id: campaignId },
-    data: { status: "SENDING", sentAt: new Date() },
+    data: { status: "SENDING", sentAt: new Date(), totalRecipients: recipients.length },
   });
 
-  // Fetch recipients
-  const whereLead: any = {
-    workspaceId,
-    company: { email: { not: null } },
-  };
-  if (campaign.listId) whereLead.lists = { some: { listId: campaign.listId } };
-  if (campaign.tagId) whereLead.tags = { some: { tagId: campaign.tagId } };
-
-  const leads = await prisma.lead.findMany({
-    where: whereLead,
-    include: { company: { select: { email: true, name: true } } },
-  });
-
-  // Asynchronous sending in background
-  executeBulkSend(campaign.id, leads, campaign.subject, campaign.bodyContent).catch((err) => {
+  executeBulkSend(campaign.id, recipients, campaign.subject, campaign.bodyContent).catch((err) => {
     console.error(`[Campaign Error] Campaign ${campaign.id} failed:`, err);
   });
 
@@ -206,30 +229,28 @@ export async function sendCampaign(workspaceId: string, userId: string, campaign
     workspaceId,
     action: "email_campaign.send",
     resourceId: campaign.id,
-    metadata: { recipientCount: leads.length },
+    metadata: { recipientCount: recipients.length },
   });
 
-  return { success: true, message: `Envio iniciado para ${leads.length} destinatários.` };
+  return { success: true, message: `Envio iniciado para ${recipients.length} destinatários.` };
 }
 
 async function executeBulkSend(
   campaignId: string,
-  leads: Array<{ id: string; company: { email: string | null; name: string } }>,
+  recipients: RecipientItem[],
   subject: string,
   bodyTemplate: string,
 ) {
   let sentCount = 0;
   let failedCount = 0;
 
-  for (const lead of leads) {
-    const email = lead.company.email;
-    if (!email) continue;
+  for (const item of recipients) {
+    if (!item.email) continue;
 
-    // Replace basic variables in template
-    const personalizedBody = bodyTemplate.replace(/\{\{\s*nome\s*\}\}/gi, lead.company.name || "Cliente");
+    const personalizedBody = bodyTemplate.replace(/\{\{\s*nome\s*\}\}/gi, item.name || "Cliente");
 
     const result = await sendEmail({
-      to: email,
+      to: item.email,
       subject,
       html: personalizedBody,
     });
@@ -239,8 +260,8 @@ async function executeBulkSend(
       await prisma.emailLog.create({
         data: {
           campaignId,
-          leadId: lead.id,
-          recipient: email,
+          leadId: item.leadId || null,
+          recipient: item.email,
           status: "SENT",
           sentAt: new Date(),
         },
@@ -250,28 +271,27 @@ async function executeBulkSend(
       await prisma.emailLog.create({
         data: {
           campaignId,
-          leadId: lead.id,
-          recipient: email,
+          leadId: item.leadId || null,
+          recipient: item.email,
           status: "FAILED",
           error: result.error || "Desconhecido",
         },
       });
     }
 
-    // Update campaign counters in real-time
     await prisma.emailCampaign.update({
       where: { id: campaignId },
       data: { sentCount, failedCount },
     });
   }
 
-  const finalStatus = failedCount === leads.length && leads.length > 0 ? "FAILED" : "COMPLETED";
+  const finalStatus = failedCount === recipients.length && recipients.length > 0 ? "FAILED" : "COMPLETED";
 
   await prisma.emailCampaign.update({
     where: { id: campaignId },
     data: {
       status: finalStatus,
-      totalRecipients: leads.length,
+      totalRecipients: recipients.length,
       sentCount,
       failedCount,
     },
