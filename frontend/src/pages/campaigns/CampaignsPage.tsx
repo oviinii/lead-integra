@@ -52,6 +52,8 @@ export function CampaignsPage() {
     fromAddress: "",
     dailyLimit: "500",
   });
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [credTest, setCredTest] = useState<{ status: "idle" | "testing" | "ok" | "error"; message?: string }>({ status: "idle" });
 
   const { data: campaignsData, isLoading } = useQuery({
     queryKey: ["email-campaigns"],
@@ -98,26 +100,52 @@ export function CampaignsPage() {
     },
   });
 
+  const buildCredentialPayload = () => ({
+    name: credForm.name.trim() || credForm.username.trim(),
+    host: credForm.host.trim() || "smtp.gmail.com",
+    port: Number(credForm.port) || 587,
+    username: credForm.username.trim(),
+    password: credForm.password.replace(/\s+/g, ""),
+    fromAddress: credForm.fromAddress.trim() || credForm.username.trim(),
+    dailyLimit: Number(credForm.dailyLimit) || 500,
+    isDefault: !credentialsData?.items?.length,
+  });
+
+  const testCredential = useMutation({
+    mutationFn: async () => {
+      const payload = buildCredentialPayload();
+      return (await api.post("/smtp-credentials/test", payload)).data;
+    },
+    onSuccess: (data) => {
+      setCredTest({ status: "ok", message: data.message || "Teste OK! Verifique sua caixa de entrada." });
+    },
+    onError: (err) => {
+      setCredTest({ status: "error", message: getErrorMessage(err) });
+    },
+  });
+
   const createCredential = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post("/smtp-credentials", {
-          name: credForm.name,
-          host: credForm.host,
-          port: Number(credForm.port) || 587,
-          username: credForm.username,
-          password: credForm.password,
-          fromAddress: credForm.fromAddress.trim() || credForm.username,
-          dailyLimit: Number(credForm.dailyLimit) || 500,
-          isDefault: !credentialsData?.items?.length,
-        })
-      ).data,
+    mutationFn: async () => (await api.post("/smtp-credentials", buildCredentialPayload())).data,
     onSuccess: () => {
       setCredentialDialog(false);
       setCredForm({ name: "", host: "smtp.gmail.com", port: "587", username: "", password: "", fromAddress: "", dailyLimit: "500" });
+      setCredTest({ status: "idle" });
+      setShowAdvanced(false);
       queryClient.invalidateQueries({ queryKey: ["smtp-credentials"] });
     },
   });
+
+  const handleSaveCredential = async () => {
+    setCredTest({ status: "testing", message: "Testando conexão..." });
+    try {
+      const payload = buildCredentialPayload();
+      const testResult = (await api.post("/smtp-credentials/test", payload)).data;
+      setCredTest({ status: "ok", message: testResult.message });
+      await createCredential.mutateAsync();
+    } catch (err) {
+      setCredTest({ status: "error", message: getErrorMessage(err) });
+    }
+  };
 
   const deleteCredential = useMutation({
     mutationFn: async (id: string) => api.delete(`/smtp-credentials/${id}`),
@@ -486,49 +514,34 @@ export function CampaignsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={credentialDialog} onOpenChange={setCredentialDialog}>
+      <Dialog open={credentialDialog} onOpenChange={(o) => { setCredentialDialog(o); if (!o) setCredTest({ status: "idle" }); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="h-5 w-5 text-primary" /> Nova credencial SMTP
+              <KeyRound className="h-5 w-5 text-primary" /> Conectar meu Gmail
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="cred-name">Nome (identificação)</Label>
-              <Input
-                id="cred-name"
-                placeholder="Ex: Meu Gmail"
-                value={credForm.name}
-                onChange={(e) => setCredForm({ ...credForm, name: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="cred-host">Servidor SMTP</Label>
-                <Input
-                  id="cred-host"
-                  placeholder="smtp.gmail.com"
-                  value={credForm.host}
-                  onChange={(e) => setCredForm({ ...credForm, host: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cred-port">Porta</Label>
-                <Input
-                  id="cred-port"
-                  type="number"
-                  value={credForm.port}
-                  onChange={(e) => setCredForm({ ...credForm, port: e.target.value })}
-                />
-              </div>
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 text-sm">
+              <p className="font-medium">1. Crie uma senha de app no Google</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Conta Google → Segurança → Verificação em 2 etapas → Senhas de app.
+              </p>
+              <a
+                href="https://myaccount.google.com/apppasswords"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
+              >
+                Abrir página de senhas de app do Google ↗
+              </a>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cred-username">Usuário / E-mail</Label>
+              <Label htmlFor="cred-username">2. Seu e-mail Gmail</Label>
               <Input
                 id="cred-username"
+                type="email"
                 placeholder="voce@gmail.com"
                 value={credForm.username}
                 onChange={(e) => setCredForm({ ...credForm, username: e.target.value })}
@@ -536,56 +549,110 @@ export function CampaignsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cred-password">Senha (ou senha de app)</Label>
+              <Label htmlFor="cred-password">3. Senha de app</Label>
               <Input
                 id="cred-password"
                 type="password"
-                placeholder="••••••••••••••••"
+                placeholder="xxxx xxxx xxxx xxxx"
                 value={credForm.password}
                 onChange={(e) => setCredForm({ ...credForm, password: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
-                Para Gmail, use uma senha de app (Conta Google → Segurança → Senhas de app). A senha é armazenada criptografada.
+                Pode colar com espaços — removemos automaticamente. O resto (servidor, porta, limite) configuramos para você.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cred-from">Remetente</Label>
-                <Input
-                  id="cred-from"
-                  placeholder="Igual ao usuário"
-                  value={credForm.fromAddress}
-                  onChange={(e) => setCredForm({ ...credForm, fromAddress: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cred-limit">Limite diário</Label>
-                <Input
-                  id="cred-limit"
-                  type="number"
-                  min={1}
-                  value={credForm.dailyLimit}
-                  onChange={(e) => setCredForm({ ...credForm, dailyLimit: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
+            >
+              {showAdvanced ? "Ocultar opções avançadas" : "Opções avançadas (outro provedor, limite diário...)"}
+            </button>
 
-          {createCredential.error && (
-            <p className="text-sm text-destructive">{getErrorMessage(createCredential.error)}</p>
-          )}
+            {showAdvanced && (
+              <div className="space-y-4 rounded-lg border p-3">
+                <div className="space-y-2">
+                  <Label htmlFor="cred-name">Nome (identificação)</Label>
+                  <Input
+                    id="cred-name"
+                    placeholder="Ex: Meu Gmail"
+                    value={credForm.name}
+                    onChange={(e) => setCredForm({ ...credForm, name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="cred-host">Servidor SMTP</Label>
+                    <Input
+                      id="cred-host"
+                      value={credForm.host}
+                      onChange={(e) => setCredForm({ ...credForm, host: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cred-port">Porta</Label>
+                    <Input
+                      id="cred-port"
+                      type="number"
+                      value={credForm.port}
+                      onChange={(e) => setCredForm({ ...credForm, port: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="cred-from">Remetente</Label>
+                    <Input
+                      id="cred-from"
+                      placeholder="Igual ao e-mail"
+                      value={credForm.fromAddress}
+                      onChange={(e) => setCredForm({ ...credForm, fromAddress: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cred-limit">Limite diário</Label>
+                    <Input
+                      id="cred-limit"
+                      type="number"
+                      min={1}
+                      value={credForm.dailyLimit}
+                      onChange={(e) => setCredForm({ ...credForm, dailyLimit: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {credTest.status !== "idle" && (
+              <p className={`text-sm ${credTest.status === "ok" ? "text-green-600" : credTest.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>
+                {credTest.status === "testing" && <Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" />}
+                {credTest.message || getErrorMessage(createCredential.error)}
+              </p>
+            )}
+            {createCredential.error && credTest.status === "idle" && (
+              <p className="text-sm text-destructive">{getErrorMessage(createCredential.error)}</p>
+            )}
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setCredentialDialog(false)}>
               Cancelar
             </Button>
             <Button
-              onClick={() => createCredential.mutate()}
-              disabled={createCredential.isPending || !credForm.name || !credForm.host || !credForm.username || !credForm.password}
+              variant="secondary"
+              onClick={() => testCredential.mutate()}
+              disabled={testCredential.isPending || !credForm.username || !credForm.password}
             >
-              {createCredential.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Salvar credencial
+              {testCredential.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Só testar
+            </Button>
+            <Button
+              onClick={handleSaveCredential}
+              disabled={credTest.status === "testing" || createCredential.isPending || !credForm.username || credForm.password.replace(/\s+/g, "").length < 8}
+            >
+              {(credTest.status === "testing" || createCredential.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              Testar e salvar
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -26,6 +26,18 @@ export const listSmtpCredentialsSchema = z.object({
   }),
 });
 
+export const testSmtpSchema = z.object({
+  body: z.object({
+    host: z.string().trim().min(3).max(255).default("smtp.gmail.com"),
+    port: z.coerce.number().int().min(1).max(65535).default(587),
+    username: z.string().trim().min(3).max(255),
+    password: z.string().min(1).max(500),
+    fromAddress: z.string().trim().email().optional(),
+  }),
+});
+
+export type TestSmtpInput = z.infer<typeof testSmtpSchema>["body"];
+
 export type CreateSmtpCredentialInput = z.infer<typeof createSmtpCredentialSchema>["body"];
 export type UpdateSmtpCredentialInput = z.infer<typeof updateSmtpCredentialSchema>["body"];
 export type ListSmtpCredentialsQuery = z.infer<typeof listSmtpCredentialsSchema>["querystring"];

@@ -4,12 +4,14 @@ import { validate } from "@/shared/middleware/validate";
 import {
   createSmtpCredentialSchema,
   listSmtpCredentialsSchema,
+  testSmtpSchema,
   updateSmtpCredentialSchema,
 } from "./smtp-credentials.schema";
 import {
   createSmtpCredential,
   deleteSmtpCredential,
   listSmtpCredentials,
+  testSmtpConnection,
   updateSmtpCredential,
 } from "./smtp-credentials.service";
 
@@ -35,6 +37,20 @@ export default async function smtpCredentialsRoutes(app: FastifyInstance): Promi
         return createSmtpCredential(ctx.workspaceId, ctx.userId, (req as any).body);
       },
     );
+
+    instance.post(
+      "/test",
+      { preValidation: validate(testSmtpSchema) },
+      async (req) => {
+        const ctx = (req as any).workspace;
+        return testSmtpConnection(ctx.workspaceId, ctx.userId, (req as any).body);
+      },
+    );
+
+    instance.post<{ Params: { id: string } }>("/:id/test", async (req) => {
+      const ctx = (req as any).workspace;
+      return testSmtpConnection(ctx.workspaceId, ctx.userId, {} as any, req.params.id);
+    });
 
     instance.patch<{ Params: { id: string } }>(
       "/:id",
