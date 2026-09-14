@@ -24,6 +24,29 @@ export async function previewRecipients(
   };
 }
 
+export async function getCampaignRecipients(workspaceId: string, campaignId: string) {
+  const campaign = await prisma.emailCampaign.findFirst({
+    where: { id: campaignId, workspaceId },
+    include: {
+      list: { select: { id: true, name: true } },
+      tag: { select: { id: true, name: true } },
+    },
+  });
+  if (!campaign) throw new NotFoundError("Campanha de e-mail");
+  const recipients = await getEligibleRecipients(workspaceId, campaign.listId, campaign.tagId);
+  return {
+    campaign: {
+      id: campaign.id,
+      name: campaign.name,
+      status: campaign.status,
+      list: campaign.list,
+      tag: campaign.tag,
+    },
+    count: recipients.length,
+    recipients: recipients.map((r) => ({ leadId: r.leadId, name: r.name, email: r.email })),
+  };
+}
+
 export async function getEmailQuota(workspaceId: string) {
   const dailyLimit = await getWorkspaceDailyLimit(workspaceId);
   const dayStart = startOfTodaySaoPaulo();

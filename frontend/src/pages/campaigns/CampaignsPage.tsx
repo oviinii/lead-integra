@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Mail, Plus, Send, Trash2, Loader2, Users, CheckCircle2, AlertCircle, KeyRound, Star, RotateCcw } from "lucide-react";
+import { Mail, Plus, Send, Trash2, Loader2, Users, CheckCircle2, AlertCircle, KeyRound, Star, RotateCcw, Pencil, Eye } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +54,8 @@ export function CampaignsPage() {
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [credTest, setCredTest] = useState<{ status: "idle" | "testing" | "ok" | "error"; message?: string }>({ status: "idle" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewRecipientsId, setViewRecipientsId] = useState<string | null>(null);
 
   const { data: campaignsData, isLoading } = useQuery({
     queryKey: ["email-campaigns"],
@@ -108,9 +110,62 @@ export function CampaignsPage() {
       ).data,
     onSuccess: () => {
       setCreateDialog(false);
+      setEditingId(null);
       setForm({ name: "", subject: "", bodyContent: "", listId: "", tagId: "", smtpCredentialId: "" });
       queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
     },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async () =>
+      (
+        await api.patch(`/email-campaigns/${editingId}`, {
+          name: form.name,
+          subject: form.subject,
+          bodyContent: form.bodyContent,
+          listId: form.listId.trim() ? form.listId : null,
+          tagId: form.tagId.trim() ? form.tagId : null,
+          smtpCredentialId: form.smtpCredentialId.trim() ? form.smtpCredentialId : null,
+        })
+      ).data,
+    onSuccess: () => {
+      setCreateDialog(false);
+      setEditingId(null);
+      setForm({ name: "", subject: "", bodyContent: "", listId: "", tagId: "", smtpCredentialId: "" });
+      queryClient.invalidateQueries({ queryKey: ["email-campaigns"] });
+    },
+  });
+
+  const openNewCampaign = () => {
+    setEditingId(null);
+    setForm({ name: "", subject: "", bodyContent: "", listId: "", tagId: "", smtpCredentialId: "" });
+    setCreateDialog(true);
+  };
+
+  const openEditCampaign = (campaign: EmailCampaign) => {
+    setEditingId(campaign.id);
+    setForm({
+      name: campaign.name,
+      subject: campaign.subject,
+      bodyContent: campaign.bodyContent,
+      listId: campaign.listId || "",
+      tagId: campaign.tagId || "",
+      smtpCredentialId: campaign.smtpCredentialId || "",
+    });
+    setCreateDialog(true);
+  };
+
+  const { data: recipientsData, isLoading: recipientsLoading } = useQuery({
+    queryKey: ["campaign-recipients", viewRecipientsId],
+    queryFn: async () =>
+      (
+        await api.get<{
+          campaign: { id: string; name: string; status: CampaignStatus };
+          count: number;
+          recipients: { leadId: string | null; name: string; email: string }[];
+        }>(`/email-campaigns/${viewRecipientsId}/recipients`)
+      ).data,
+    enabled: !!viewRecipientsId,
   });
 
   const buildCredentialPayload = () => ({
@@ -196,7 +251,7 @@ export function CampaignsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">E-mail Marketing</h1>
           <p className="text-muted-foreground">Crie e envie campanhas de e-mail em massa para seus leads.</p>
         </div>
-        <Button onClick={() => setCreateDialog(true)} className="gap-2">
+        <Button onClick={openNewCampaign} className="gap-2">
           <Plus className="h-4 w-4" /> Nova Campanha
         </Button>
       </div>
@@ -246,7 +301,7 @@ export function CampaignsPage() {
               title="Nenhuma campanha criada"
               description="Crie sua primeira campanha para disparar e-mails para seus leads."
               action={
-                <Button onClick={() => setCreateDialog(true)} className="gap-2">
+                <Button onClick={openNewCampaign} className="gap-2">
                   <Plus className="h-4 w-4" /> Criar campanha
                 </Button>
               }
@@ -319,6 +374,25 @@ export function CampaignsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setViewRecipientsId(campaign.id)}
+                          className="gap-1.5 text-xs"
+                          title="Ver empresas que receberão o e-mail"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Ver leads
+                        </Button>
+                        {(campaign.status === "DRAFT" || campaign.status === "SCHEDULED" || campaign.status === "FAILED") && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openEditCampaign(campaign)}
+                            title="Editar campanha"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         {campaign.status !== "SENDING" && (
                           <Button
                             size="sm"
@@ -421,11 +495,11 @@ export function CampaignsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+      <Dialog open={createDialog} onOpenChange={(o) => { setCreateDialog(o); if (!o) setEditingId(null); }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" /> Nova Campanha de E-mail
+              <Mail className="h-5 w-5 text-primary" /> {editingId ? "Editar Campanha" : "Nova Campanha de E-mail"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
@@ -530,20 +604,74 @@ export function CampaignsPage() {
             </div>
           </div>
 
-          {createMutation.error && (
-            <p className="text-sm text-destructive">{getErrorMessage(createMutation.error)}</p>
+          {(createMutation.error || updateMutation.error) && (
+            <p className="text-sm text-destructive">
+              {getErrorMessage((createMutation.error || updateMutation.error) as unknown as Error)}
+            </p>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialog(false)}>
+            <Button variant="outline" onClick={() => { setCreateDialog(false); setEditingId(null); }}>
               Cancelar
             </Button>
             <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !form.name || !form.subject || !form.bodyContent}
+              onClick={() => (editingId ? updateMutation.mutate() : createMutation.mutate())}
+              disabled={
+                createMutation.isPending || updateMutation.isPending || !form.name || !form.subject || !form.bodyContent
+              }
             >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Criar Campanha
+              {createMutation.isPending || updateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              {editingId ? "Salvar alterações" : "Criar Campanha"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!viewRecipientsId} onOpenChange={(o) => !o && setViewRecipientsId(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" /> Empresas que receberão o e-mail
+            </DialogTitle>
+          </DialogHeader>
+          {recipientsLoading ? (
+            <div className="grid place-items-center p-12 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+            </div>
+          ) : !recipientsData?.recipients?.length ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma empresa com e-mail encontrada para os filtros desta campanha.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                <strong className="text-foreground">{recipientsData.count}</strong> destinatário(s) — {recipientsData.campaign.name}
+              </p>
+              <div className="max-h-96 overflow-y-auto rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Empresa</TableHead>
+                      <TableHead>E-mail</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recipientsData.recipients.map((r, idx) => (
+                      <TableRow key={`${r.email}-${idx}`}>
+                        <TableCell className="font-medium">{r.name}</TableCell>
+                        <TableCell className="text-muted-foreground">{r.email}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewRecipientsId(null)}>
+              Fechar
             </Button>
           </DialogFooter>
         </DialogContent>
