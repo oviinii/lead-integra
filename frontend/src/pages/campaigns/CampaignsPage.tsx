@@ -81,6 +81,19 @@ export function CampaignsPage() {
     queryFn: async () => (await api.get<{ items: SmtpCredential[] }>("/smtp-credentials")).data,
   });
 
+  const previewListId = form.listId.trim() || undefined;
+  const previewTagId = form.tagId.trim() || undefined;
+  const { data: preview, isFetching: previewLoading } = useQuery({
+    queryKey: ["recipients-preview", previewListId, previewTagId],
+    queryFn: async () =>
+      (
+        await api.get<{ count: number; sample: { name: string; email: string }[] }>("/email-campaigns/recipients-preview", {
+          params: { listId: previewListId, tagId: previewTagId },
+        })
+      ).data,
+    enabled: createDialog,
+  });
+
   const createMutation = useMutation({
     mutationFn: async () =>
       (
@@ -462,6 +475,28 @@ export function CampaignsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm">
+              {previewLoading ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Calculando destinatários...
+                </span>
+              ) : (
+                <>
+                  <p>
+                    Esta campanha alcançará{" "}
+                    <strong>{preview?.count ?? 0} destinatário(s)</strong>
+                    {previewListId || previewTagId ? " do filtro selecionado" : " (todos com e-mail)"}.
+                  </p>
+                  {!!preview?.sample?.length && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ex: {preview.sample.map((s) => s.email).join(", ")}
+                      {preview.count > preview.sample.length && "..."}
+                    </p>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="space-y-2">

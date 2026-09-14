@@ -12,6 +12,7 @@ import {
   getCampaign,
   getEmailQuota,
   listCampaigns,
+  previewRecipients,
   sendCampaign,
   updateCampaign,
 } from "./email-campaigns.service";
@@ -42,6 +43,12 @@ export default async function emailCampaignsRoutes(app: FastifyInstance): Promis
     instance.get("/quota", async (req) => {
       const ctx = (req as any).workspace;
       return getEmailQuota(ctx.workspaceId);
+    });
+
+    instance.get("/recipients-preview", async (req) => {
+      const ctx = (req as any).workspace;
+      const query = (req as any).query as { listId?: string; tagId?: string };
+      return previewRecipients(ctx.workspaceId, query.listId, query.tagId);
     });
 
     instance.get<{ Params: { id: string } }>("/:id", async (req) => {

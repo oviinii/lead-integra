@@ -12,6 +12,18 @@ export function startOfTodaySaoPaulo(now = new Date()): Date {
   return new Date(spTime.getTime() + 3 * 3600 * 1000);
 }
 
+export async function previewRecipients(
+  workspaceId: string,
+  listId?: string | null,
+  tagId?: string | null,
+) {
+  const recipients = await getEligibleRecipients(workspaceId, listId, tagId);
+  return {
+    count: recipients.length,
+    sample: recipients.slice(0, 5).map((r) => ({ name: r.name, email: r.email })),
+  };
+}
+
 export async function getEmailQuota(workspaceId: string) {
   const dailyLimit = await getWorkspaceDailyLimit(workspaceId);
   const dayStart = startOfTodaySaoPaulo();
