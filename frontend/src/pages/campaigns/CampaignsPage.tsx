@@ -64,8 +64,8 @@ export function CampaignsPage() {
           name: form.name,
           subject: form.subject,
           bodyContent: form.bodyContent,
-          listId: form.listId || undefined,
-          tagId: form.tagId || undefined,
+          listId: form.listId.trim() ? form.listId : undefined,
+          tagId: form.tagId.trim() ? form.tagId : undefined,
         })
       ).data,
     onSuccess: () => {

@@ -10,11 +10,18 @@ interface RecipientItem {
   name: string;
 }
 
+function cleanId(value?: string | null): string | null {
+  if (!value || !value.trim()) return null;
+  return value;
+}
+
 async function getEligibleRecipients(
   workspaceId: string,
   listId?: string | null,
   tagId?: string | null,
 ): Promise<RecipientItem[]> {
+  listId = cleanId(listId);
+  tagId = cleanId(tagId);
   if (listId) {
     const leads = await prisma.lead.findMany({
       where: {
@@ -80,8 +87,8 @@ export async function createCampaign(
       name: data.name,
       subject: data.subject,
       bodyContent: data.bodyContent,
-      listId: data.listId || null,
-      tagId: data.tagId || null,
+      listId: cleanId(data.listId),
+      tagId: cleanId(data.tagId),
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       status: data.scheduledAt ? "SCHEDULED" : "DRAFT",
       totalRecipients: recipients.length,
@@ -161,8 +168,8 @@ export async function updateCampaign(
     throw new AppError("Não é possível alterar uma campanha em andamento ou concluída", 400);
   }
 
-  const listId = data.listId !== undefined ? data.listId : existing.listId;
-  const tagId = data.tagId !== undefined ? data.tagId : existing.tagId;
+  const listId = data.listId !== undefined ? cleanId(data.listId) : existing.listId;
+  const tagId = data.tagId !== undefined ? cleanId(data.tagId) : existing.tagId;
 
   const recipients = await getEligibleRecipients(workspaceId, listId, tagId);
 
