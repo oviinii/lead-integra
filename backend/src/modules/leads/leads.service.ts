@@ -11,13 +11,54 @@ export async function createLead(
   userId: string,
   body: CreateLeadInput,
 ) {
+  let companyId = body.companyId;
+
+  if (!companyId && body.company) {
+    const manual = body.company;
+    const emailNormalized = manual.email?.trim().toLowerCase() || null;
+
+    // Reuse existing company in the workspace if document or email matches
+    const dedupOr: Prisma.CompanyWhereInput[] = [];
+    if (manual.document?.trim()) dedupOr.push({ workspaceId, document: manual.document.trim() });
+    if (emailNormalized) dedupOr.push({ workspaceId, email: emailNormalized });
+
+    const duplicate = dedupOr.length
+      ? await prisma.company.findFirst({ where: { OR: dedupOr } })
+      : null;
+
+    if (duplicate) {
+      companyId = duplicate.id;
+    } else {
+      const created = await prisma.company.create({
+        data: {
+          workspaceId,
+          source: "manual",
+          name: manual.name.trim(),
+          email: emailNormalized,
+          phone: manual.phone?.trim() || null,
+          whatsapp: manual.whatsapp?.trim() || null,
+          website: manual.website?.trim() || null,
+          document: manual.document?.trim() || null,
+          category: manual.category?.trim() || null,
+          city: manual.city?.trim() || null,
+          state: manual.state?.trim() || null,
+          address: manual.address?.trim() || null,
+          isActive: true,
+        },
+      });
+      companyId = created.id;
+    }
+  }
+
+  if (!companyId) throw new NotFoundError("Company");
+
   const company = await prisma.company.findFirst({
-    where: { id: body.companyId, workspaceId },
+    where: { id: companyId, workspaceId },
   });
   if (!company) throw new NotFoundError("Company");
 
   const existing = await prisma.lead.findUnique({
-    where: { workspaceId_companyId: { workspaceId, companyId: body.companyId } },
+    where: { workspaceId_companyId: { workspaceId, companyId } },
   });
   if (existing) throw new ConflictError("Company already saved as lead");
 
@@ -26,7 +67,7 @@ export async function createLead(
   const lead = await prisma.lead.create({
     data: {
       workspaceId,
-      companyId: body.companyId,
+      companyId: companyId as string,
       status: body.status,
       notes: body.notes,
       assigneeId: body.assigneeId,
@@ -55,7 +96,7 @@ export async function createLead(
     workspaceId,
     action: "lead.create",
     resourceId: lead.id,
-    metadata: { companyId: body.companyId },
+    metadata: { companyId },
   });
 
   return { lead };

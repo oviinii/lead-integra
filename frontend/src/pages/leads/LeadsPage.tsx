@@ -44,6 +44,19 @@ export function LeadsPage() {
   const [addListDialog, setAddListDialog] = useState(false);
   const [selectedListId, setSelectedListId] = useState("");
   const [editDialog, setEditDialog] = useState<Lead | null>(null);
+  const [createDialog, setCreateDialog] = useState(false);
+  const [newLead, setNewLead] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    whatsapp: "",
+    website: "",
+    document: "",
+    category: "",
+    city: "",
+    state: "",
+    notes: "",
+  });
 
   const { data: tags } = useQuery({
     queryKey: ["tags"],
@@ -112,6 +125,45 @@ export function LeadsPage() {
     onError: (err) => getErrorMessage(err),
   });
 
+  const createLead = useMutation({
+    mutationFn: async () => {
+      const clean = (v: string) => (v.trim() ? v.trim() : undefined);
+      return (
+        await api.post("/leads", {
+          company: {
+            name: newLead.name.trim(),
+            email: clean(newLead.email),
+            phone: clean(newLead.phone),
+            whatsapp: clean(newLead.whatsapp),
+            website: clean(newLead.website),
+            document: clean(newLead.document),
+            category: clean(newLead.category),
+            city: clean(newLead.city),
+            state: clean(newLead.state),
+          },
+          notes: clean(newLead.notes),
+        })
+      ).data;
+    },
+    onSuccess: () => {
+      setCreateDialog(false);
+      setNewLead({
+        name: "",
+        email: "",
+        phone: "",
+        whatsapp: "",
+        website: "",
+        document: "",
+        category: "",
+        city: "",
+        state: "",
+        notes: "",
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -119,14 +171,19 @@ export function LeadsPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Meus leads</h1>
           <p className="text-muted-foreground">Gerencie, qualifique e exporte seus leads.</p>
         </div>
-          <Button
-            variant="outline"
-            onClick={() => {
-              window.location.href = `${(import.meta as any).env.VITE_API_URL || ""}/api/exports`;
-            }}
-          >
-            <Download className="h-4 w-4" /> Exportar CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setCreateDialog(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Novo lead
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                window.location.href = `${(import.meta as any).env.VITE_API_URL || ""}/api/exports`;
+              }}
+            >
+              <Download className="h-4 w-4" /> Exportar CSV
+            </Button>
+          </div>
         </div>
 
         {selectedLeads.size > 0 && (
@@ -348,6 +405,138 @@ export function LeadsPage() {
               disabled={!selectedListId || addToList.isPending}
             >
               {addToList.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-4 w-4" /> Cadastrar lead manualmente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-name">Nome da empresa *</Label>
+                <Input
+                  id="new-name"
+                  placeholder="Ex: Acme Ltda"
+                  value={newLead.name}
+                  onChange={(e) => setNewLead({ ...newLead, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-email">E-mail</Label>
+                <Input
+                  id="new-email"
+                  type="email"
+                  placeholder="contato@empresa.com"
+                  value={newLead.email}
+                  onChange={(e) => setNewLead({ ...newLead, email: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-phone">Telefone</Label>
+                <Input
+                  id="new-phone"
+                  placeholder="(11) 99999-9999"
+                  value={newLead.phone}
+                  onChange={(e) => setNewLead({ ...newLead, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-whatsapp">WhatsApp</Label>
+                <Input
+                  id="new-whatsapp"
+                  placeholder="5511999999999"
+                  value={newLead.whatsapp}
+                  onChange={(e) => setNewLead({ ...newLead, whatsapp: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-website">Site</Label>
+                <Input
+                  id="new-website"
+                  placeholder="https://empresa.com"
+                  value={newLead.website}
+                  onChange={(e) => setNewLead({ ...newLead, website: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-document">CNPJ</Label>
+                <Input
+                  id="new-document"
+                  placeholder="00.000.000/0001-00"
+                  value={newLead.document}
+                  onChange={(e) => setNewLead({ ...newLead, document: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="new-category">Categoria</Label>
+                <Input
+                  id="new-category"
+                  placeholder="Ex: Clínica"
+                  value={newLead.category}
+                  onChange={(e) => setNewLead({ ...newLead, category: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-city">Cidade</Label>
+                <Input
+                  id="new-city"
+                  placeholder="Ex: São Paulo"
+                  value={newLead.city}
+                  onChange={(e) => setNewLead({ ...newLead, city: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-state">Estado</Label>
+                <Input
+                  id="new-state"
+                  placeholder="Ex: SP"
+                  value={newLead.state}
+                  onChange={(e) => setNewLead({ ...newLead, state: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-notes">Observações</Label>
+              <Textarea
+                id="new-notes"
+                placeholder="Adicione observações sobre este lead..."
+                rows={3}
+                value={newLead.notes}
+                onChange={(e) => setNewLead({ ...newLead, notes: e.target.value })}
+              />
+            </div>
+
+            {createLead.error && (
+              <p className="text-sm text-destructive">{getErrorMessage(createLead.error)}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => createLead.mutate()}
+              disabled={createLead.isPending || newLead.name.trim().length < 2}
+            >
+              {createLead.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Cadastrar lead
             </Button>
           </DialogFooter>
         </DialogContent>
