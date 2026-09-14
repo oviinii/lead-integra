@@ -4,58 +4,58 @@
 
 @layer base {
   :root {
-    /* Red / Black palette — light fallback */
-    --background: 0 0% 97%;
-    --foreground: 220 10% 15%;
+    /* Trust blue (primary) + growth emerald (success) — light */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 15%;
-    --primary: 0 84% 52%;
+    --card-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 10% 94%;
-    --secondary-foreground: 220 10% 15%;
-    --muted: 220 10% 94%;
-    --muted-foreground: 220 9% 46%;
-    --accent: 0 84% 52%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 55%;
+    --secondary: 220 14% 93%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 93%;
+    --muted-foreground: 220 9% 42%;
+    --accent: 217 91% 94%;
+    --accent-foreground: 221 83% 45%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
+    --success: 160 84% 36%;
     --success-foreground: 0 0% 100%;
-    --border: 220 10% 88%;
-    --input: 220 10% 88%;
-    --ring: 0 84% 52%;
-    --radius: 0.35rem;
+    --border: 220 13% 88%;
+    --input: 220 13% 82%;
+    --ring: 221 83% 53%;
+    --radius: 0.5rem;
     /* shadcn/ui tokens */
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 15%;
-    --popover-border: 220 10% 88%;
+    --popover-foreground: 222 47% 11%;
+    --popover-border: 220 13% 88%;
   }
 
   .dark {
-    /* Deep black background + red accents */
-    --background: 0 0% 6%;
-    --foreground: 0 0% 88%;
-    --card: 0 0% 10%;
-    --card-foreground: 0 0% 88%;
-    --primary: 0 84% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 0 0% 16%;
-    --secondary-foreground: 0 0% 86%;
-    --muted: 0 0% 13%;
-    --muted-foreground: 0 0% 56%;
-    --accent: 0 0% 16%;
-    --accent-foreground: 0 0% 88%;
-    --destructive: 0 84% 55%;
+    /* Comfortable slate background + bright trust blue */
+    --background: 222 47% 8%;
+    --foreground: 213 27% 88%;
+    --card: 222 42% 11%;
+    --card-foreground: 213 27% 88%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 33% 16%;
+    --secondary-foreground: 213 27% 88%;
+    --muted: 217 33% 15%;
+    --muted-foreground: 215 20% 60%;
+    --accent: 217 33% 18%;
+    --accent-foreground: 213 27% 90%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --border: 0 0% 22%;
-    --input: 0 0% 22%;
-    --ring: 0 84% 52%;
+    --success: 158 64% 50%;
+    --success-foreground: 222 47% 8%;
+    --border: 217 33% 20%;
+    --input: 217 33% 24%;
+    --ring: 217 91% 60%;
     /* shadcn/ui tokens */
-    --popover: 0 0% 10%;
-    --popover-foreground: 0 0% 88%;
-    --popover-border: 0 0% 22%;
+    --popover: 222 42% 12%;
+    --popover-foreground: 213 27% 88%;
+    --popover-border: 217 33% 20%;
   }
 }
 
@@ -78,13 +78,20 @@
 
 /* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 4px;
+  background: hsl(var(--muted-foreground) / 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground));
+  background: hsl(var(--muted-foreground) / 0.55);
+  border: 2px solid transparent;
+  background-clip: content-box;
 }

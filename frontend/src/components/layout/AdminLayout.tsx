@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, useLocation, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -12,8 +12,6 @@ import {
   Menu,
   X,
   LogOut,
-  UserPlus,
-  Plus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -28,19 +26,18 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { to: "/admin", label: "Visão Geral", icon: LayoutDashboard, color: "text-blue-500", bg: "group-hover:bg-blue-500/10" },
-  { to: "/admin/users", label: "Usuários", icon: Users, color: "text-purple-500", bg: "group-hover:bg-purple-500/10" },
-  { to: "/admin/workspaces", label: "Workspaces", icon: Building2, color: "text-indigo-500", bg: "group-hover:bg-indigo-500/10" },
-  { to: "/admin/credits", label: "Créditos", icon: CreditCard, color: "text-red-500", bg: "group-hover:bg-red-500/10" },
-  { to: "/admin/providers", label: "Providers", icon: Plug, color: "text-amber-500", bg: "group-hover:bg-amber-500/10" },
-  { to: "/admin/plans", label: "Planos", icon: CreditCard, color: "text-emerald-500", bg: "group-hover:bg-emerald-500/10" },
-  { to: "/admin/analytics", label: "Analytics", icon: BarChart3, color: "text-cyan-500", bg: "group-hover:bg-cyan-500/10" },
-  { to: "/admin/settings", label: "Configurações", icon: Settings, color: "text-pink-500", bg: "group-hover:bg-pink-500/10" },
+  { to: "/admin", label: "Visão Geral", icon: LayoutDashboard },
+  { to: "/admin/users", label: "Usuários", icon: Users },
+  { to: "/admin/workspaces", label: "Workspaces", icon: Building2 },
+  { to: "/admin/credits", label: "Créditos", icon: CreditCard },
+  { to: "/admin/providers", label: "Providers", icon: Plug },
+  { to: "/admin/plans", label: "Planos", icon: CreditCard },
+  { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/admin/settings", label: "Configurações", icon: Settings },
 ];
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
-  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -60,22 +57,26 @@ export function AdminLayout() {
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <nav className="flex flex-col gap-1 p-3">
+        <nav className="flex flex-col gap-0.5 p-3">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }: { isActive: boolean }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "hover:bg-accent"
+                    ? "bg-primary/10 font-medium text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )
               }
             >
-              <item.icon className={`h-4 w-4 ${item.color}`} />
-              {item.label}
+              {({ isActive }: { isActive: boolean }) => (
+                <>
+                  <item.icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground/70")} />
+                  {item.label}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

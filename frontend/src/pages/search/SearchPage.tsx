@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, Link } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Search, Loader2, MapPin, Building2, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api, getErrorMessage } from "@/lib/api";
-import type { Company, Search as SearchType } from "@/types";
+import type { Search as SearchType } from "@/types";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
 import { StateSelect, CitySelect } from "@/components/forms/LocationSelect";
 
 // Segment presets that match common OSM tags
@@ -41,9 +40,12 @@ const RADIUS_PRESETS = [
 
 export function SearchPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
+  // Prefill vindo da busca global do header (AppShell)
+  const incomingKeyword = ((location.state as { keyword?: string } | null)?.keyword ?? "").trim();
   const [form, setForm] = useState({
-    keyword: "",
+    keyword: incomingKeyword,
     country: "Brasil",
     state: "",
     city: "",
@@ -54,6 +56,12 @@ export function SearchPage() {
     quantity: 50,
   });
   const [customKeyword, setCustomKeyword] = useState(false);
+
+  useEffect(() => {
+    if (incomingKeyword) {
+      setForm((f) => ({ ...f, keyword: incomingKeyword }));
+    }
+  }, [incomingKeyword]);
 
   const { data: searches } = useQuery({
     queryKey: ["searches"],

@@ -90,8 +90,8 @@ const FEATURES = [
     title: "Multi-workspace e multi-usuário",
     description:
       "Cada equipe tem seu workspace isolado, com papéis OWNER, ADMIN, MEMBER e VIEWER.",
-    iconColor: "text-red-500",
-    bg: "bg-red-500/10",
+    iconColor: "text-blue-500",
+    bg: "bg-blue-500/10",
   },
 ];
 
@@ -268,7 +268,7 @@ export function LandingPage() {
 
       {/* HERO */}
       <section id="top" className="relative overflow-hidden pt-24 pb-16 sm:pt-32 sm:pb-24">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.16),transparent_60%)]" />
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div>

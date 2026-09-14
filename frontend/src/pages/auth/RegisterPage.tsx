@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { getErrorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import { AuthLayout } from "./AuthLayout";
 
 const schema = z.object({
   name: z.string().min(2),
@@ -19,15 +21,46 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+function passwordScore(password: string): number {
+  let score = 0;
+  if (password.length >= 8) score += 1;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+  if (/\d/.test(password)) score += 1;
+  if (/[^a-zA-Z0-9]/.test(password)) score += 1;
+  return score;
+}
+
+const STRENGTH_LABELS = ["", "Muito fraca", "Fraca", "Boa", "Forte"];
+const STRENGTH_COLORS = ["bg-muted", "bg-destructive", "bg-amber-500", "bg-blue-500", "bg-emerald-500"];
+
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null;
+  const score = passwordScore(password);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={cn("h-1.5 flex-1 rounded-full", i <= score ? STRENGTH_COLORS[score] : "bg-muted")}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Força da senha: {STRENGTH_LABELS[score]}</p>
+    </div>
+  );
+}
+
 export function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+  const passwordValue = watch("password", "");
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
@@ -43,30 +76,28 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="grid min-h-screen place-items-center bg-muted/30 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Building2 className="h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl">Criar conta</CardTitle>
+    <AuthLayout>
+      <Card className="border-0 shadow-none sm:border sm:shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl tracking-tight">Criar conta</CardTitle>
           <CardDescription>Crie sua conta e workspace em segundos.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Seu nome</Label>
-              <Input id="name" {...register("name")} />
+              <Input id="name" autoComplete="name" placeholder="Seu nome" {...register("name")} />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" {...register("email")} />
+              <Input id="email" type="email" autoComplete="email" placeholder="voce@empresa.com" {...register("email")} />
               {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" {...register("password")} />
+              <Input id="password" type="password" autoComplete="new-password" placeholder="Mínimo 8 caracteres" {...register("password")} />
+              <PasswordStrength password={passwordValue} />
               {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
             <div className="space-y-2">
@@ -87,6 +118,6 @@ export function RegisterPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
