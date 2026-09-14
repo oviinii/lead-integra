@@ -1,8 +1,31 @@
 import { prisma } from "@/shared/database/prisma";
 import { AppError, NotFoundError } from "@/shared/errors/AppError";
-import { sendEmail } from "@/shared/utils/email";
+import { sendEmail, SmtpTransportConfig } from "@/shared/utils/email";
 import { logAudit } from "@/shared/utils/audit";
+import { getWorkspaceDailyLimit, resolveSmtpConfig } from "@/modules/smtp-credentials/smtp-credentials.service";
 import { CreateCampaignInput, ListCampaignsQuery, UpdateCampaignInput } from "./email-campaigns.schema";
+
+/** Início do dia atual no fuso de São Paulo (UTC-3, sem horário de verão desde 2019). */
+export function startOfTodaySaoPaulo(now = new Date()): Date {
+  const spTime = new Date(now.getTime() - 3 * 3600 * 1000);
+  spTime.setUTCHours(0, 0, 0, 0);
+  return new Date(spTime.getTime() + 3 * 3600 * 1000);
+}
+
+export async function getEmailQuota(workspaceId: string) {
+  const dailyLimit = await getWorkspaceDailyLimit(workspaceId);
+  const dayStart = startOfTodaySaoPaulo();
+  const sentToday = await prisma.emailLog.count({
+    where: {
+      status: "SENT",
+      createdAt: { gte: dayStart },
+      campaign: { workspaceId },
+    },
+  });
+  const remaining = Math.max(0, dailyLimit - sentToday);
+  const nextReset = new Date(dayStart.getTime() + 24 * 3600 * 1000);
+  return { sentToday, dailyLimit, remaining, resetsAt: nextReset.toISOString() };
+}
 
 interface RecipientItem {
   leadId?: string | null;
@@ -89,6 +112,7 @@ export async function createCampaign(
       bodyContent: data.bodyContent,
       listId: cleanId(data.listId),
       tagId: cleanId(data.tagId),
+      smtpCredentialId: cleanId(data.smtpCredentialId),
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       status: data.scheduledAt ? "SCHEDULED" : "DRAFT",
       totalRecipients: recipients.length,
@@ -96,6 +120,7 @@ export async function createCampaign(
     include: {
       list: { select: { id: true, name: true } },
       tag: { select: { id: true, name: true } },
+      smtpCredential: { select: { id: true, name: true } },
     },
   });
 
@@ -123,6 +148,7 @@ export async function listCampaigns(workspaceId: string, query: ListCampaignsQue
     include: {
       list: { select: { id: true, name: true } },
       tag: { select: { id: true, name: true } },
+      smtpCredential: { select: { id: true, name: true } },
       creator: { select: { id: true, name: true, email: true } },
     },
   });
@@ -142,6 +168,7 @@ export async function getCampaign(workspaceId: string, campaignId: string) {
     include: {
       list: { select: { id: true, name: true } },
       tag: { select: { id: true, name: true } },
+      smtpCredential: { select: { id: true, name: true } },
       creator: { select: { id: true, name: true, email: true } },
       logs: {
         take: 100,
@@ -170,6 +197,8 @@ export async function updateCampaign(
 
   const listId = data.listId !== undefined ? cleanId(data.listId) : existing.listId;
   const tagId = data.tagId !== undefined ? cleanId(data.tagId) : existing.tagId;
+  const smtpCredentialId =
+    data.smtpCredentialId !== undefined ? cleanId(data.smtpCredentialId) : existing.smtpCredentialId;
 
   const recipients = await getEligibleRecipients(workspaceId, listId, tagId);
 
@@ -181,12 +210,14 @@ export async function updateCampaign(
       bodyContent: data.bodyContent ?? existing.bodyContent,
       listId,
       tagId,
+      smtpCredentialId,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : existing.scheduledAt,
       totalRecipients: recipients.length,
     },
     include: {
       list: { select: { id: true, name: true } },
       tag: { select: { id: true, name: true } },
+      smtpCredential: { select: { id: true, name: true } },
     },
   });
 
@@ -216,18 +247,37 @@ export async function sendCampaign(workspaceId: string, userId: string, campaign
     where: { id: campaignId, workspaceId },
   });
   if (!campaign) throw new NotFoundError("Campanha de e-mail");
-  if (campaign.status === "SENDING" || campaign.status === "COMPLETED") {
-    throw new AppError("Esta campanha já foi enviada ou está em andamento", 400);
+  if (campaign.status === "SENDING") {
+    throw new AppError("Esta campanha já está em andamento", 400);
   }
 
+  const quota = await getEmailQuota(workspaceId);
+  if (quota.remaining <= 0) {
+    throw new AppError(
+      `Limite diário de e-mails atingido (${quota.sentToday}/${quota.dailyLimit}). Tente novamente após a meia-noite.`,
+      429,
+    );
+  }
+
+  const smtp = await resolveSmtpConfig(workspaceId, campaign.smtpCredentialId);
   const recipients = await getEligibleRecipients(workspaceId, campaign.listId, campaign.tagId);
 
   await prisma.emailCampaign.update({
     where: { id: campaignId },
-    data: { status: "SENDING", sentAt: new Date(), totalRecipients: recipients.length },
+    data: {
+      status: "SENDING",
+      sentAt: new Date(),
+      totalRecipients: recipients.length,
+      sentCount: 0,
+      failedCount: 0,
+    },
   });
 
-  executeBulkSend(campaign.id, recipients, campaign.subject, campaign.bodyContent).catch((err) => {
+  executeBulkSend(campaign.id, recipients, campaign.subject, campaign.bodyContent, {
+    transport: smtp.host ? { host: smtp.host, port: smtp.port, user: smtp.user, pass: smtp.pass } : null,
+    from: smtp.from,
+    quotaRemaining: quota.remaining,
+  }).catch((err) => {
     console.error(`[Campaign Error] Campaign ${campaign.id} failed:`, err);
   });
 
@@ -236,10 +286,10 @@ export async function sendCampaign(workspaceId: string, userId: string, campaign
     workspaceId,
     action: "email_campaign.send",
     resourceId: campaign.id,
-    metadata: { recipientCount: recipients.length },
+    metadata: { recipientCount: recipients.length, smtp: smtp.label },
   });
 
-  return { success: true, message: `Envio iniciado para ${recipients.length} destinatários.` };
+  return { success: true, message: `Envio iniciado para ${recipients.length} destinatários via "${smtp.label}".` };
 }
 
 async function executeBulkSend(
@@ -247,12 +297,18 @@ async function executeBulkSend(
   recipients: RecipientItem[],
   subject: string,
   bodyTemplate: string,
+  opts: { transport: SmtpTransportConfig | null; from: string; quotaRemaining: number },
 ) {
   let sentCount = 0;
   let failedCount = 0;
+  let quotaExhausted = false;
 
   for (const item of recipients) {
     if (!item.email) continue;
+    if (sentCount >= opts.quotaRemaining) {
+      quotaExhausted = true;
+      break;
+    }
 
     const personalizedBody = bodyTemplate.replace(/\{\{\s*nome\s*\}\}/gi, item.name || "Cliente");
 
@@ -260,6 +316,8 @@ async function executeBulkSend(
       to: item.email,
       subject,
       html: personalizedBody,
+      from: opts.from,
+      transport: opts.transport,
     });
 
     if (result.success) {
@@ -303,4 +361,10 @@ async function executeBulkSend(
       failedCount,
     },
   });
+
+  if (quotaExhausted) {
+    console.log(
+      `[Campaign ${campaignId}] Cota diária atingida: ${sentCount} enviados, ${recipients.length - sentCount - failedCount} pendentes para o próximo dia.`,
+    );
+  }
 }

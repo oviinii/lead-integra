@@ -6,6 +6,7 @@ const campaignBody = z.object({
   bodyContent: z.string().min(5, "Conteúdo do e-mail é obrigatório"),
   listId: z.string().optional().nullable(),
   tagId: z.string().optional().nullable(),
+  smtpCredentialId: z.string().optional().nullable(),
   scheduledAt: z.string().optional().nullable(),
 });
 

@@ -117,10 +117,32 @@ export interface EmailCampaign {
   failedCount: number;
   listId?: string | null;
   tagId?: string | null;
+  smtpCredentialId?: string | null;
   list?: { id: string; name: string } | null;
   tag?: { id: string; name: string } | null;
+  smtpCredential?: { id: string; name: string } | null;
   scheduledAt?: string | null;
   sentAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SmtpCredential {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  fromAddress: string;
+  dailyLimit: number;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmailQuota {
+  sentToday: number;
+  dailyLimit: number;
+  remaining: number;
+  resetsAt: string;
 }

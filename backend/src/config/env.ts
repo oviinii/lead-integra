@@ -33,6 +33,9 @@ export const env = {
   SMTP_PASSWORD: process.env.SMTP_PASSWORD || "",
   SMTP_FROM: process.env.SMTP_FROM || "noreply@lead.local",
 
+  CREDENTIALS_ENCRYPTION_KEY: process.env.CREDENTIALS_ENCRYPTION_KEY || "",
+  DEFAULT_EMAIL_DAILY_LIMIT: Number(process.env.DEFAULT_EMAIL_DAILY_LIMIT || 500),
+
   LOG_LEVEL: process.env.LOG_LEVEL || "info",
   SENTRY_DSN: process.env.SENTRY_DSN || "",
 

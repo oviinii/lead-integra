@@ -10,6 +10,7 @@ import {
   createCampaign,
   deleteCampaign,
   getCampaign,
+  getEmailQuota,
   listCampaigns,
   sendCampaign,
   updateCampaign,
@@ -37,6 +38,11 @@ export default async function emailCampaignsRoutes(app: FastifyInstance): Promis
         return createCampaign(ctx.workspaceId, ctx.userId, (req as any).body);
       },
     );
+
+    instance.get("/quota", async (req) => {
+      const ctx = (req as any).workspace;
+      return getEmailQuota(ctx.workspaceId);
+    });
 
     instance.get<{ Params: { id: string } }>("/:id", async (req) => {
       const ctx = (req as any).workspace;

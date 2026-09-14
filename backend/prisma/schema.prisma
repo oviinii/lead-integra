@@ -158,6 +158,7 @@ model Workspace {
   notifications      Notification[]
   auditLogs          AuditLog[]
   emailCampaigns     EmailCampaign[]
+  smtpCredentials    SmtpCredential[]
 
   @@index([slug])
   @@index([ownerId])
@@ -556,21 +557,44 @@ model EmailCampaign {
   totalRecipients Int            @default(0)
   sentCount       Int            @default(0)
   failedCount     Int            @default(0)
-  listId          String?
-  tagId           String?
-  scheduledAt     DateTime?
-  sentAt          DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  listId           String?
+  tagId            String?
+  smtpCredentialId String?
+  scheduledAt      DateTime?
+  sentAt           DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  creator   User      @relation(fields: [createdById], references: [id])
-  list      LeadList? @relation(fields: [listId], references: [id], onDelete: SetNull)
-  tag       Tag?      @relation(fields: [tagId], references: [id], onDelete: SetNull)
-  logs      EmailLog[]
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator        User            @relation(fields: [createdById], references: [id])
+  list           LeadList?       @relation(fields: [listId], references: [id], onDelete: SetNull)
+  tag            Tag?            @relation(fields: [tagId], references: [id], onDelete: SetNull)
+  smtpCredential SmtpCredential? @relation(fields: [smtpCredentialId], references: [id], onDelete: SetNull)
+  logs           EmailLog[]
 
   @@index([workspaceId])
   @@index([workspaceId, status])
+}
+
+model SmtpCredential {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  createdById  String
+  name         String
+  host         String
+  port         Int      @default(587)
+  username     String
+  passwordEnc  String
+  fromAddress  String
+  dailyLimit   Int      @default(500)
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns EmailCampaign[]
+
+  @@index([workspaceId])
 }
 
 model EmailLog {
