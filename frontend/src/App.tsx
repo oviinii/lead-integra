@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AppShell } from "@/components/layout/AppShell";
@@ -23,7 +24,10 @@ import { CreditsPage } from "@/pages/CreditsPage";
 import { SettingsPage } from "@/pages/settings/SettingsPage";
 import { AdminOverviewPage } from "@/pages/admin/AdminOverviewPage";
 import { AdminUsersPage } from "@/pages/admin/AdminUsersPage";
+import { AdminUserNewPage } from "@/pages/admin/AdminUserNewPage";
+import { AdminUserDetailPage } from "@/pages/admin/AdminUserDetailPage";
 import { AdminWorkspacesPage } from "@/pages/admin/AdminWorkspacesPage";
+import { AdminWorkspaceDetailPage } from "@/pages/admin/AdminWorkspaceDetailPage";
 import { AdminProvidersPage } from "@/pages/admin/AdminProvidersPage";
 import { AdminPlansPage } from "@/pages/admin/AdminPlansPage";
 import { AdminPlanDetailPage } from "@/pages/admin/AdminPlanDetailPage";
@@ -183,7 +187,10 @@ export default function App() {
               >
                 <Route path="/admin" element={<AdminOverviewPage />} />
                 <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/users/new" element={<AdminUserNewPage />} />
+                <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
                 <Route path="/admin/workspaces" element={<AdminWorkspacesPage />} />
+                <Route path="/admin/workspaces/:id" element={<AdminWorkspaceDetailPage />} />
                 <Route path="/admin/providers" element={<AdminProvidersPage />} />
                 <Route path="/admin/plans" element={<AdminPlansPage />} />
                 <Route path="/admin/plans/:id" element={<AdminPlanDetailPage />} />
@@ -194,6 +201,7 @@ export default function App() {
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
+            <Toaster position="top-right" richColors closeButton />
           </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>

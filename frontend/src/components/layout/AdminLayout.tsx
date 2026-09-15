@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -36,9 +36,36 @@ const navItems = [
   { to: "/admin/settings", label: "Configurações", icon: Settings },
 ];
 
+const SECTION_LABELS: Record<string, string> = {
+  users: "Usuários",
+  workspaces: "Workspaces",
+  credits: "Créditos",
+  providers: "Providers",
+  plans: "Planos",
+  analytics: "Analytics",
+  settings: "Configurações",
+};
+
+function buildCrumbs(pathname: string): Array<{ label: string; to?: string }> {
+  const crumbs: Array<{ label: string; to?: string }> = [{ label: "Painel Admin", to: "/admin" }];
+  const parts = pathname.split("/").filter(Boolean).slice(1); // remove "admin"
+  if (parts.length === 0) return crumbs;
+  const [section, id] = parts;
+  const sectionLabel = SECTION_LABELS[section] ?? section;
+  if (!id) {
+    crumbs.push({ label: sectionLabel });
+    return crumbs;
+  }
+  crumbs.push({ label: sectionLabel, to: `/admin/${section}` });
+  crumbs.push({ label: id === "new" ? "Novo" : "Detalhes" });
+  return crumbs;
+}
+
 export function AdminLayout() {
   const { user, logout } = useAuth();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const crumbs = buildCrumbs(location.pathname);
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -88,10 +115,24 @@ export function AdminLayout() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-2 border-b bg-background/95 px-4 backdrop-blur md:px-6">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(true)}>
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Button variant="ghost" size="icon" className="shrink-0 md:hidden" onClick={() => setMobileOpen(true)}>
               <Menu className="h-4 w-4" />
             </Button>
+            <nav className="flex min-w-0 items-center gap-1.5 truncate text-sm text-muted-foreground" aria-label="Breadcrumb">
+              {crumbs.map((c, i) => (
+                <span key={c.to + c.label} className="flex items-center gap-1.5">
+                  {i > 0 && <span className="text-muted-foreground/50">/</span>}
+                  {i === crumbs.length - 1 || !c.to ? (
+                    <span className="truncate font-medium text-foreground">{c.label}</span>
+                  ) : (
+                    <Link to={c.to} className="truncate hover:text-foreground hover:underline">
+                      {c.label}
+                    </Link>
+                  )}
+                </span>
+              ))}
+            </nav>
           </div>
 
           <div className="flex items-center gap-2 ml-auto">

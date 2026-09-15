@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Loader2, CreditCard, ArrowLeft, Save, AlertCircle } from "lucide-react";
 import {
   Card,
@@ -23,12 +24,21 @@ export function AdminPlanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [hasApi, setHasApi] = useState<boolean | null>(null);
+  const [isActive, setIsActive] = useState<boolean | null>(null);
 
   const { data: plan, isLoading } = useQuery({
     queryKey: ["admin-plan", id],
     queryFn: async () => (await api.get(`/admin/plans/${id}`)).data,
     enabled: !!id,
   });
+
+  useEffect(() => {
+    if (plan?.plan) {
+      setHasApi(plan.plan.hasApi);
+      setIsActive(plan.plan.isActive);
+    }
+  }, [plan?.plan?.id]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => (await api.patch(`/admin/plans/${id}`, data)).data,
@@ -53,8 +63,8 @@ export function AdminPlanDetailPage() {
       maxUsers: parseInt(formData.get("maxUsers") as string) || 1,
       maxSearches: parseInt(formData.get("maxSearches") as string) || 10,
       maxExports: parseInt(formData.get("maxExports") as string) || 5,
-      hasApi: formData.get("hasApi") === "on",
-      isActive: formData.get("isActive") === "on",
+      hasApi: hasApi ?? false,
+      isActive: isActive ?? true,
     };
     updateMutation.mutate(data);
   };
@@ -149,11 +159,11 @@ export function AdminPlanDetailPage() {
 
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Switch id="hasApi" name="hasApi" checked={p.hasApi} />
+                <Switch id="hasApi" checked={hasApi ?? p.hasApi} onCheckedChange={setHasApi} />
                 <Label htmlFor="hasApi">Acesso à API</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <Switch id="isActive" name="isActive" checked={p.isActive} />
+                <Switch id="isActive" checked={isActive ?? p.isActive} onCheckedChange={setIsActive} />
                 <Label htmlFor="isActive">Plano ativo</Label>
               </div>
             </div>

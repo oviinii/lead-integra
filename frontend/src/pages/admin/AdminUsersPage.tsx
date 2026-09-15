@@ -2,16 +2,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
-  Search,
   Loader2,
   UserCheck,
   UserX,
   Shield,
   Mail,
-  Calendar,
   MoreHorizontal,
   UserPlus,
   Users,
+  Trash2,
+  Download,
 } from "lucide-react";
 import {
   Card,
@@ -42,15 +42,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api, getErrorMessage } from "@/lib/api";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function AdminUsersPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users", search, page, pageSize],
@@ -62,17 +65,61 @@ export function AdminUsersPage() {
       ).data,
   });
 
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
   const toggleActive = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) =>
       api.patch(`/admin/users/${id}`, { isActive }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: (_, v) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(v.isActive ? "Usuário ativado" : "Usuário desativado");
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
   });
 
   const toggleSuperAdmin = useMutation({
     mutationFn: async ({ id, isSuperAdmin }: { id: string; isSuperAdmin: boolean }) =>
       api.patch(`/admin/users/${id}`, { isSuperAdmin }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+    onSuccess: (_, v) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success(v.isSuperAdmin ? "Promovido a Super Admin" : "Acesso de Super Admin removido");
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => api.delete(`/admin/users/${id}`),
+    onSuccess: () => {
+      setDeleteTarget(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Usuário excluído");
+    },
+    onError: (err) => {
+      setDeleteTarget(null);
+      toast.error(getErrorMessage(err));
+    },
+  });
+
+  const exportCsv = () => {
+    const rows = (data?.users ?? []).map((u: any) => ({
+      Nome: u.name,
+      Email: u.email,
+      Status: u.isActive ? "Ativo" : "Inativo",
+      Tipo: u.isSuperAdmin ? "Super Admin" : "Usuário",
+      Workspaces: u._count?.ownedWorkspaces ?? 0,
+      CriadoEm: u.createdAt,
+    }));
+    const header = Object.keys(rows[0] ?? { Nome: "", Email: "", Status: "", Tipo: "", Workspaces: "", CriadoEm: "" });
+    const csv = [header.join(";"), ...rows.map((r: any) => header.map((h) => `"${String(r[h] ?? "").replace(/"/g, '""')}"`).join(";"))].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "usuarios.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
@@ -82,7 +129,10 @@ export function AdminUsersPage() {
           <p className="text-muted-foreground">Gerencie usuários da plataforma.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
+          <Button variant="outline" onClick={exportCsv} disabled={!data?.users?.length}>
+            <Download className="h-4 w-4 mr-2" /> CSV
+          </Button>
+          <Button asChild>
             <Link to="/admin/users/new">
               <UserPlus className="h-4 w-4 mr-2" /> Novo usuário
             </Link>
@@ -98,7 +148,7 @@ export function AdminUsersPage() {
           <Input
             placeholder="Buscar por nome, email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
         </CardContent>
       </Card>
@@ -172,6 +222,12 @@ export function AdminUsersPage() {
                           <DropdownMenuItem onSelect={() => navigate(`/admin/users/${u.id}`)}>
                             <Mail className="h-4 w-4 mr-2" /> Ver detalhes
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onSelect={() => setDeleteTarget({ id: u.id, name: u.name })}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -184,7 +240,7 @@ export function AdminUsersPage() {
           {/* Pagination */}
           <div className="flex items-center justify-between border-t p-4">
             <span className="text-sm text-muted-foreground">
-              Página {page}
+              {formatNumber(total)} usuário(s) · Página {page} de {totalPages}
             </span>
             <div className="flex gap-2">
               <Button
@@ -198,7 +254,8 @@ export function AdminUsersPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage((p: number) => p + 1)}
+                onClick={() => setPage((p: number) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
               >
                 Próxima
               </Button>
@@ -206,6 +263,16 @@ export function AdminUsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        title="Excluir usuário?"
+        description={deleteTarget ? `"${deleteTarget.name}" será excluído permanentemente. Se possuir workspaces vinculados, a exclusão será bloqueada.` : ""}
+        confirmLabel="Excluir"
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+      />
     </div>
   );
 }

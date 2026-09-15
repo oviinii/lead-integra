@@ -6,6 +6,7 @@ import { prisma } from "@/shared/database/prisma";
 import { ConflictError, UnauthorizedError, NotFoundError, AppError } from "@/shared/errors/AppError";
 import { LoginInput, RegisterInput, RefreshInput } from "./auth.schema";
 import { logAudit } from "@/shared/utils/audit";
+import { isMaintenanceMode } from "@/shared/utils/platformSettings";
 
 const REFRESH_BYTES = 48;
 
@@ -88,6 +89,10 @@ export async function loginHandler(
   if (!user || !user.isActive) throw new UnauthorizedError("Invalid credentials");
   const valid = await argon2.verify(user.passwordHash, password);
   if (!valid) throw new UnauthorizedError("Invalid credentials");
+
+  if (!user.isSuperAdmin && (await isMaintenanceMode())) {
+    throw new AppError("Plataforma em manutenção. Tente novamente em instantes.", 503, "MAINTENANCE_MODE");
+  }
 
   const tokens = await signTokens(app, user.id, user.email);
   await logAudit({ userId: user.id, action: "auth.login", ip: request.ip, userAgent: request.headers["user-agent"] as string });

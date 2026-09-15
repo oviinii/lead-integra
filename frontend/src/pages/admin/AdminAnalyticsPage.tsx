@@ -1,29 +1,77 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { Loader2, TrendingUp, BarChart3, Users, Building2, FileSearch, Download, Sparkles, Clock, Calendar, MapPin } from "lucide-react";
+import { TrendingUp, Users, Building2, FileSearch, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { formatDateTime, formatNumber } from "@/lib/utils";
+import { formatNumber } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  BarChart,
+  Bar,
+} from "recharts";
+
+type Period = "7" | "30" | "90";
+
+function formatTick(date: string) {
+  const [, m, d] = date.split("-").map(Number);
+  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}`;
+}
+
+function formatFull(date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
 
 export function AdminAnalyticsPage() {
+  const [period, setPeriod] = useState<Period>("30");
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-analytics"],
     queryFn: async () => (await api.get("/admin/analytics")).data,
+    refetchInterval: 60_000,
   });
 
   const { data: dailyStats, isLoading: dailyLoading } = useQuery({
-    queryKey: ["admin-analytics-daily"],
-    queryFn: async () => (await api.get("/admin/analytics/daily")).data,
+    queryKey: ["admin-analytics-daily", period],
+    queryFn: async () => (await api.get("/admin/analytics/daily", { params: { days: period } })).data,
+    refetchInterval: 60_000,
   });
+
+  const searches = (dailyStats?.dailySearches ?? []) as Array<{ date: string; count: number }>;
+  const users = (dailyStats?.dailyUsers ?? []) as Array<{ date: string; count: number }>;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="text-muted-foreground">Métricas e tendências da plataforma.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+          <p className="text-muted-foreground">Métricas e tendências da plataforma em tempo real.</p>
+        </div>
+        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="Período" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="7">Últimos 7 dias</SelectItem>
+            <SelectItem value="30">Últimos 30 dias</SelectItem>
+            <SelectItem value="90">Últimos 90 dias</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -36,31 +84,37 @@ export function AdminAnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-purple-500" /> Pesquisas por Dia (Últimos 30 dias)</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-purple-500" /> Pesquisas por dia
+            </CardTitle>
+            <CardDescription>Total de buscas executadas na plataforma.</CardDescription>
           </CardHeader>
           <CardContent>
-            {!dailyStats?.dailySearches?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>
+            {dailyLoading ? (
+              <Skeleton className="h-64" />
+            ) : searches.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Sem dados</p>
             ) : (
-              <div className="space-y-2">
-                {dailyStats.dailySearches.slice(-30).reverse().map((d: any) => {
-                  const max = Math.max(...dailyStats.dailySearches.map((x: any) => x.count));
-                  const pct = (d.count / max) * 100;
-                  return (
-                    <div key={d.date} className="flex items-center gap-3 text-sm">
-                      <span className="w-20 text-xs text-muted-foreground">{formatDateTime(d.date).split(",")[0]}</span>
-                      <div className="flex-1">
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-gradient-to-t from-purple-500/40 to-purple-500 transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="w-6 text-right font-medium">{d.count}</span>
-                    </div>
-                  );
-                })}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={searches} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+                    <defs>
+                      <linearGradient id="searchesFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#a855f7" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="#a855f7" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tickFormatter={formatTick} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      labelFormatter={(label) => formatFull(String(label))}
+                      formatter={(v) => [v, "Pesquisas"]}
+                      contentStyle={{ borderRadius: 8, fontSize: 12 }}
+                    />
+                    <Area type="monotone" dataKey="count" stroke="#a855f7" strokeWidth={2} fill="url(#searchesFill)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>
@@ -68,31 +122,32 @@ export function AdminAnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4 text-blue-500" /> Novos Usuários por Dia (Últimos 30 dias)</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-blue-500" /> Novos usuários por dia
+            </CardTitle>
+            <CardDescription>Cadastros criados na plataforma.</CardDescription>
           </CardHeader>
           <CardContent>
-            {!dailyStats?.dailyUsers?.length ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>
+            {dailyLoading ? (
+              <Skeleton className="h-64" />
+            ) : users.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Sem dados</p>
             ) : (
-              <div className="space-y-2">
-                {dailyStats.dailyUsers.slice(-30).reverse().map((d: any) => {
-                  const max = Math.max(...dailyStats.dailyUsers.map((x: any) => x.count));
-                  const pct = (d.count / max) * 100;
-                  return (
-                    <div key={d.date} className="flex items-center gap-3 text-sm">
-                      <span className="w-20 text-xs text-muted-foreground">{formatDateTime(d.date).split(",")[0]}</span>
-                      <div className="flex-1">
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full bg-gradient-to-t from-blue-500/40 to-blue-500 transition-all"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                      <span className="w-6 text-right font-medium">{d.count}</span>
-                    </div>
-                  );
-                })}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={users} margin={{ top: 4, right: 8, bottom: 0, left: -12 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tickFormatter={formatTick} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={24} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <Tooltip
+                      labelFormatter={(label) => formatFull(String(label))}
+                      formatter={(v) => [v, "Usuários"]}
+                      contentStyle={{ borderRadius: 8, fontSize: 12 }}
+                      cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
+                    />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>

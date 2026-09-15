@@ -516,6 +516,12 @@ model Plan {
   updatedAt       DateTime @updatedAt
 }
 
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model ApiKey {
   id          String   @id @default(cuid())
   userId      String
